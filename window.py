@@ -36,22 +36,25 @@ def Init(name):
     KeyDown('F11')  # F11设置为时间调制器的快捷键
     KeyDown('esc')  # esc关闭下方信息窗口
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
-    pos = (int((x1+x2)/2), int((y1+y2)/2))
+    pos = (int((x1+x2)/2), int((y1+y2+35)/2))
     win32api.SetCursorPos(pos)
     Roll(-1, 13, 0.1)  # 滚轮调整视野缩放
 
     return handle
 
 
-# 截取指定窗口画面,并返回窗口中心点坐标
-def ScreenShot(handle):
+# 截取指定窗口画面,并返回截取的窗口对角坐标(左上/右下)
+def ScreenShot(handle=None):
+    if handle is None:
+        handle = win32gui.FindWindow(None, 'Hades\' Star')
+
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
     img = ImageGrab.grab((x1, y1, x2, y2))  # 截图
     img = np.array(img)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
     screen = img[50:935, 100:1500]  # 裁去边缘部分
-    return screen
+    return screen, (x1 + 100, y1 + 50, x2 - 100, y2 - 15)
 
 
 # 鼠标左键点击
@@ -83,21 +86,41 @@ def Roll(direction, times, sleeptime=0.05):
 
 
 # 当前视野坐标定位
-def Location(handle=None):
+def sunPosition(handle=None):
     if handle is None:
         handle = win32gui.FindWindow(None, 'Hades\' Star')
 
-    screen = ScreenShot(handle)  # 窗口截图
+    screen, _ = ScreenShot(handle)  # 窗口截图
 
     # 找到黄星
-    s = np.ones((18, 18), np.uint8)
+    s = np.ones((20, 20), np.uint8)
     opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
     grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
-    _, grey = cv2.threshold(grey, 200, 255, cv2.THRESH_BINARY)  # 转化为二值图像
+    _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
+    # imshow(grey)
     # 计算黄星中心相对于图片中心坐标
     contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) == 0:
+        print("视野中没有找到黄星，正在重试...")
+        Init('Hades\' Star')
+        screen, _ = ScreenShot(handle)  # 窗口截图
+
+        # 找到黄星
+        s = np.ones((20, 20), np.uint8)
+        opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
+        grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
+        _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
+        # imshow(grey)
+        # 计算黄星中心相对于图片中心坐标
+        contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours) == 0:
+            print("视野中没有找到黄星")
+            return None
+        else:
+            print("重试成功")
+
     if len(contours) != 1:
-        print("可能没有准确找到中心"), print("有%d个轮廓" % len(contours))
+        print("可能没有准确找到中心,", end=''), print("有%d个疑似点" % len(contours))
     (x, y), _ = cv2.minEnclosingCircle(contours[0])
     location = (int(x - screen.shape[1] / 2), int(y - screen.shape[0] / 2))
     return location
@@ -105,26 +128,27 @@ def Location(handle=None):
 
 # 移动视野,使黄星坐标变为给定坐标
 def Relocate(pos, tolerance=50):
-    current = Location()
+    current = sunPosition()
+
     x = pos[0] - current[0]
     y = pos[1] - current[1]
 
     while x > tolerance:
         KeyDown('left_arrow', 0.001 * abs(x))
-        current = Location()
+        current = sunPosition()
         x = pos[0] - current[0]
     while x < -tolerance:
         KeyDown('right_arrow', 0.001 * abs(x))
-        current = Location()
+        current = sunPosition()
         x = pos[0] - current[0]
 
     while y > tolerance:
         KeyDown('up_arrow', 0.001 * abs(y))
-        current = Location()
+        current = sunPosition()
         y = pos[1] - current[1]
     while y < -tolerance:
         KeyDown('down_arrow', 0.001 * abs(y))
-        current = Location()
+        current = sunPosition()
         y = pos[1] - current[1]
 
 

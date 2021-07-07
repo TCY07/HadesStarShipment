@@ -1,6 +1,8 @@
 
 # 存放数据
 
+import math
+
 # 键盘输入码
 VK_CODE = {
     'backspace': 0x08,
@@ -150,4 +152,48 @@ VK_CODE = {
     "'": 0xDE
 }
 
+a = 140  # 星区边长
+r = math.sqrt(3) * a / 2  # 星区内切圆半径
+
+# 星区编号转换
+SECTOR_X = {
+    'A': -3,
+    'B': -2,
+    'C': -1,
+    'D': 0,
+    'E': 1,
+    'F': 2,
+    'G': 3
+}
+
+# 由星球编号查找星球星区的字典
+PLANET_SECTOR = {
+    1: 'D5',
+    2: 'D5',
+    3: 'E4',
+    4: 'C5',
+    5: 'E3',
+    6: 'C6',
+    7: 'A4',
+    8: 'C3',
+    9: 'B2',
+    10: 'E2',
+    11: 'C2',
+    12: 'B1',
+    13: 'G2',
+    14: 'G4',
+    15: 'F5',
+    16: 'E1',
+}
+
+
+# 获取星区（外接矩形）左上角的相对黄星坐标
+def sectorPostion(name):
+    x = SECTOR_X[name[0]]
+    y = int(name[1])
+
+    pos_x = int(1.5 * a * x - a)
+    pos_y = int(2 * r * (y - 4 + 0.5 * abs(x)) - r)
+
+    return pos_x, pos_y
 

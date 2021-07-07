@@ -14,21 +14,31 @@ import Find
 if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
-    window.Relocate((0, 0))
 
-    time.sleep(1)
-    img = window.ScreenShot(handle)
-    img2 = img.copy()
+    for num in range(13, 17):
+        pos = Find.findSector(num, 5)
+        window.LClick(pos)
+        # time.sleep(0.05)
 
-    for num in range(1, 16):
-        loc = Find.Find(num, img, -0.30)
-        filename = 'Pictures/' + str(num) + '.PNG'
-        target = cv2.imread(filename)
-        for pt in zip(*loc[::-1]):
-            bottom_right = (pt[0] + target.shape[1], pt[1] + target.shape[0])
-            cv2.rectangle(img2, pt, bottom_right, (255, 255, 255), 2)
+    # while 1:
+    #     locate = window.sunPosition(handle)
+    #     print(locate)
+    #     window.Relocate((0, 0, 10))
 
-    window.imshow(img2)
+    # time.sleep(1)
+    # img = window.ScreenShot(handle)
+    # img2 = img.copy()
+    #
+    # for num in range(1, 17):
+    #     loc = Find.Find(num, img, -0.30)
+    #     filename = 'Pictures/' + str(num) + '.PNG'
+    #     target = cv2.imread(filename)
+    #     for pt in zip(*loc[::-1]):
+    #         bottom_right = (pt[0] + target.shape[1], pt[1] + target.shape[0])
+    #         cv2.rectangle(img2, pt, bottom_right, (255, 255, 255), 2)
+    #
+    # window.imshow(img2)
+
 
 
 # ————初始化————
