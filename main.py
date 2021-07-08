@@ -15,10 +15,16 @@ if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
 
-    for num in range(13, 17):
-        pos = Find.findSector(num, 5)
-        window.LClick(pos)
-        # time.sleep(0.05)
+    pos = Find.findMoon(101)
+    win32api.SetCursorPos(pos)
+
+    # for num in range(15, 17):
+    #     pos = Find.findPlanet(num, 0)
+    #     win32api.SetCursorPos(pos)
+        # window.Roll(1, 8)
+        # window.RClick(pos)
+        # window.KeyDown('esc')
+        # time.sleep(0.01)
 
     # while 1:
     #     locate = window.sunPosition(handle)

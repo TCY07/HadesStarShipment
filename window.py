@@ -97,7 +97,7 @@ def sunPosition(handle=None):
     opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
     grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
     _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
-    # imshow(grey)
+
     # 计算黄星中心相对于图片中心坐标
     contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:
@@ -110,18 +110,25 @@ def sunPosition(handle=None):
         opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
         grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
         _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
-        # imshow(grey)
+
         # 计算黄星中心相对于图片中心坐标
         contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if len(contours) == 0:
             print("视野中没有找到黄星")
-            return None
+            exit(1)
         else:
             print("重试成功")
 
-    if len(contours) != 1:
-        print("可能没有准确找到中心,", end=''), print("有%d个疑似点" % len(contours))
     (x, y), _ = cv2.minEnclosingCircle(contours[0])
+    # 如果有多个疑似点，则选择面积最大的点视为黄星
+    if len(contours) != 1:
+        print("有%d个疑似点" % len(contours))
+        # 选择面积最大的点视为黄星
+        maxArea = cv2.contourArea(contours[0])
+        for cont in contours:
+            if cv2.contourArea(cont) > maxArea:
+                (x, y), _ = cv2.minEnclosingCircle(cont)
+
     location = (int(x - screen.shape[1] / 2), int(y - screen.shape[0] / 2))
     return location
 
