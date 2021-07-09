@@ -110,7 +110,7 @@ def findPlanet(planetNum, tolerance):
 # 找卫星
 def findMoon(planetNum):
     # 先找所环绕的行星
-    planetPos = findPlanet(int(planetNum / 100), 0)
+    planetPos = findPlanet(int(planetNum / 100), -250)
     win32api.SetCursorPos(planetPos)
     window.Roll(1, 8)  # 以行星为中心放大
     time.sleep(0.2)
@@ -141,7 +141,7 @@ def findMoon(planetNum):
         contours, _ = cv2.findContours(np.uint8(result), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         if len(contours) != 2:
-            print("定位卫星失败,只获取了%d个可能点" % len(contours))
+            print("定位卫星失败,获取了%d个可能点" % len(contours))
             exit(1)
         (x1, y1), _ = cv2.minEnclosingCircle(contours[0])
         (x2, y2), _ = cv2.minEnclosingCircle(contours[1])

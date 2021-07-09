@@ -9,42 +9,42 @@ import win32api
 import win32con
 import window
 import Find
+import shipmentInfo
 
 
 if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
 
+
+
+    ''' 本段可实现依次点击星系内所有星球
+    for num in range(1, 17):
+        pos = Find.findPlanet(num, 0)
+        win32api.SetCursorPos(pos)
+        window.LClick(pos)
+
+    window.KeyDown('esc')
+
     pos = Find.findMoon(101)
-    win32api.SetCursorPos(pos)
+    window.LClick(pos)
+    window.Roll(-1, 9)
+    time.sleep(0.5)
 
-    # for num in range(15, 17):
-    #     pos = Find.findPlanet(num, 0)
-    #     win32api.SetCursorPos(pos)
-        # window.Roll(1, 8)
-        # window.RClick(pos)
-        # window.KeyDown('esc')
-        # time.sleep(0.01)
+    pos = Find.findMoon(102)
+    window.LClick(pos)
+    window.Roll(-1, 10)
+    time.sleep(0.5)
 
-    # while 1:
-    #     locate = window.sunPosition(handle)
-    #     print(locate)
-    #     window.Relocate((0, 0, 10))
+    pos = Find.findMoon(201)
+    window.LClick(pos)
+    window.Roll(-1, 9)
+    time.sleep(0.5)
 
-    # time.sleep(1)
-    # img = window.ScreenShot(handle)
-    # img2 = img.copy()
-    #
-    # for num in range(1, 17):
-    #     loc = Find.Find(num, img, -0.30)
-    #     filename = 'Pictures/' + str(num) + '.PNG'
-    #     target = cv2.imread(filename)
-    #     for pt in zip(*loc[::-1]):
-    #         bottom_right = (pt[0] + target.shape[1], pt[1] + target.shape[0])
-    #         cv2.rectangle(img2, pt, bottom_right, (255, 255, 255), 2)
-    #
-    # window.imshow(img2)
-
+    pos = Find.findMoon(301)
+    window.LClick(pos)
+    window.Roll(-1, 10)
+    time.sleep(0.5)'''
 
 
 # ————初始化————
