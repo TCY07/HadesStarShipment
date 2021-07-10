@@ -8,39 +8,63 @@ import cv2
 import numpy as np
 import time
 
+nameTempla = {}
+
+# 读入星球名字图像模板（黑底白字）
+for num in range(1, 3):
+    templa = cv2.imread('Pictures/name' + str(num) + '.PNG')
+    templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+    # _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+    nameTempla[num] = templa
+
+templa = cv2.imread('Pictures/name101.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+# _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+nameTempla[101] = templa
+
+templa = cv2.imread('Pictures/name102.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+# _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+nameTempla[102] = templa
+
+# templa = cv2.imread('Pictures/name201.PNG')
+# templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+# _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+# nameTempla[201] = templa
+#
+# templa = cv2.imread('Pictures/name301.PNG')
+# templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+# _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+# nameTempla[301] = templa
+
 
 # 传入单个货物的信息条截图，返回该货物的详细信息
 def detailInfo(img):
-    numberArea = img[0:20, 90:180]
+    numberArea = img[0:23, 85:180]
+    _, numberArea = cv2.threshold(numberArea, 175, 255, cv2.THRESH_BINARY_INV)
+
+    # numberArea = img[5:20, 90:175]
     # _, numberArea = cv2.threshold(numberArea, 175, 255, cv2.THRESH_BINARY_INV)
     # cv2.imwrite('Pictures/name2.PNG', numberArea)
-    # window.imshow(numberArea)
-    k = nameMatch(numberArea, 'name1', 'name2')
-    print(k)
+    # window.imshow(numberArea, '模板')
+
+    nameMatch(numberArea)
 
 
 # 传入星球名字截图，返回两个选项中可能性更大的一个序号
-def nameMatch(img, p1, p2):
-    template1 = cv2.imread('Pictures/' + str(p1) + '.PNG')
-    template1 = cv2.cvtColor(template1, cv2.COLOR_RGB2GRAY)
-    template2 = cv2.imread('Pictures/' + str(p2) + '.PNG')
-    template2 = cv2.cvtColor(template2, cv2.COLOR_RGB2GRAY)
+def nameMatch(img):
+    # 记录匹配得分
+    scores = {}
 
-    # 将img转换为黑底白字
-    _, img = cv2.threshold(img, 175, 255, cv2.THRESH_BINARY_INV)
-    _, template1 = cv2.threshold(template1, 175, 255, cv2.THRESH_BINARY_INV)
-    _, template2 = cv2.threshold(template2, 175, 255, cv2.THRESH_BINARY_INV)
+    for i, templa in nameTempla.items():
+        _, scores[i], _, _ = cv2.minMaxLoc(cv2.matchTemplate(img, templa, cv2.TM_CCORR_NORMED))
+        # print(scores[i])
+        # img2 = img[5:20, 5:90]
+        # img2 = np.hstack((img2, templa))
+        # window.imshow(img2)
 
-    score1 = cv2.matchTemplate(img, template1, cv2.TM_CCORR_NORMED)
-    score2 = cv2.matchTemplate(img, template2, cv2.TM_CCORR_NORMED)
-    print(score1)
-    print(score2)
-
-    if score1 > score2:
-        return 1
-    else:
-        return 2
-
+    max_Key = max(scores, key=scores.get)
+    print(max_Key)
 
 # 将输入的轮廓按从上到下排序
 def sortContours(contours):
@@ -60,7 +84,7 @@ def contoursFilter(conts, ar, area):
 
         # 获取指定长宽比的轮廓
         if abs(ar - a) < 0.2 * ar:
-            if abs(cv2.contourArea(cont) - area) < 0.1 * area:  # 通过面积二次确认
+            if abs(cv2.contourArea(cont) - area) < 0.2 * area:  # 通过面积二次确认
                 # print(a)
                 # print(cv2.contourArea(cont))
                 results.append(cont)
@@ -101,9 +125,12 @@ for pt in zip(*locs[::-1]):
     cv2.rectangle(upSide, (pt[0] - 230, pt[1]), (pt[0] + coin.shape[1], pt[1] + coin.shape[0]), (255, 255, 255), 1)
 
 _, upSide = cv2.threshold(upSide, 175, 255, cv2.THRESH_BINARY_INV)
-contours, _ = cv2.findContours(upSide, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+contours, hierarch = cv2.findContours(upSide, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+for num in range(len(contours)):
+    if hierarch[0][num][3] < 0:  # 该轮廓无父轮廓
+        conts.append(contours[num])
 
-conts = contoursFilter(contours, 5.6, 10000)
+conts = contoursFilter(conts, 5.6, 10000)
 
 # 将轮廓按从上到下排序
 conts = sortContours(conts)
@@ -112,8 +139,8 @@ for ct in conts:
     cut = upSide[y:y + h, x:x + w]
     detailInfo(cut)
 
-cv2.drawContours(upSide, conts, -1, (0, 0, 0), 1)
-window.imshow(upSide)
+# cv2.drawContours(upSide, conts, -1, (0, 0, 0), 1)
+# window.imshow(upSide)
 
 # cv2.drawContours(img, contours, i, (255, 255, 255), 2)
 # window.imshow(img)

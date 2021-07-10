@@ -9,7 +9,7 @@ import win32api
 import win32con
 import window
 import Find
-import shipmentInfo
+# import shipmentInfo
 
 
 if __name__ == '__main__':
