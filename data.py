@@ -188,18 +188,33 @@ PLANET_SECTOR = {
     14: 'G4',
     15: 'F5',
     16: 'E1',
+    'center1': 'A2B2',  # 1号贸易站
+    'center2': 'D2E1E2',  # 2号贸易站
+    'center3': 'E1E2F1'  # 3号贸易站
 }
 
 
 # 获取星区（外接矩形）左上角的相对黄星坐标
 def sectorPostion(name):
-    x = SECTOR_X[name[0]]
-    y = int(name[1])
+    if len(name) == 2:  # 是星区内部的星球
+        x = SECTOR_X[name[0]]
+        y = int(name[1])
 
-    pos_x = int(1.5 * a * x - a)
-    pos_y = int(2 * r * (y - 4 + 0.5 * abs(x)) - r)
+        pos_x = int(1.5 * a * x - a)
+        pos_y = int(2 * r * (y - 4 + 0.5 * abs(x)) - r)
+    elif name == 'A2B2':  # 1号贸易站的星区
+        pos_x = int(-4.5 * a)
+        pos_y = int(-2 * r)
+    elif name == 'D2E1E2':  # 2号贸易站的星区
+        pos_x = 0
+        pos_y = int(-5 * r)
+    elif name == 'E1E2F1':  # 3号贸易站的星区
+        pos_x = int(1.5 * a)
+        pos_y = int(-5.2 * r)
 
     return pos_x, pos_y
+
+
 
 
 

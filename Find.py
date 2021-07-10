@@ -11,7 +11,10 @@ import data
 
 # 通过星球编号number，从传入图像background中查找星球坐标
 def match(number, background, tolerance):
-    filename = 'Pictures/' + str(number) + '.PNG'
+    if isinstance(number, int):
+        filename = 'Pictures/' + str(number) + '.PNG'
+    else:
+        filename = 'Pictures/center.PNG'
     target = cv2.imread(filename)
     target = cv2.split(target)[1]
     background = cv2.split(background)[1]

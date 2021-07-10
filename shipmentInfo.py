@@ -38,6 +38,12 @@ templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
 # _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
 nameTempla[301] = templa
 
+for i in range(1, 4):
+    templa = cv2.imread('Pictures/name' + str(1000 + i) + '.PNG')
+    templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+    # _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
+    nameTempla[1000 + i] = templa
+
 
 # 传入单个货物的信息条截图，返回该货物的详细信息
 def detailInfo(img):
@@ -45,7 +51,7 @@ def detailInfo(img):
     numberArea = img[0:25, 80:185]
     _, numberArea = cv2.threshold(numberArea, 175, 255, cv2.THRESH_BINARY_INV)
 
-    # 可用于保存模板
+    # 可用于制作模板
     # numberArea = img[5:20, 90:175]
     # _, numberArea = cv2.threshold(numberArea, 175, 255, cv2.THRESH_BINARY_INV)
     # cv2.imwrite('Pictures/name8.PNG', numberArea)
@@ -149,6 +155,9 @@ def CurrentShipment():
 
     # 将轮廓按从上到下排序
     conts = sortContours(conts)
+    if len(conts) != 4:
+        print("出错，读入了%d个数据" % len(conts))
+        exit(1)
     res = []
     for ct in conts:
         (x, y, w, h) = cv2.boundingRect(ct)
