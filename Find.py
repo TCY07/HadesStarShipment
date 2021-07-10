@@ -107,6 +107,16 @@ def findPlanet(planetNum, tolerance):
     return pos
 
 
+# 尝试在结果图中找到两颗卫星的轮廓
+def tryGetMood(result, threshold):
+    _, bw = cv2.threshold(result, threshold, 255, cv2.THRESH_BINARY)  # 转化为二值图像
+    s = np.ones((5, 5))
+    bw = cv2.dilate(bw, s)
+
+    contours, _ = cv2.findContours(np.uint8(bw), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    return contours
+
+
 # 找卫星
 def findMoon(planetNum):
     # 先找所环绕的行星
@@ -114,6 +124,8 @@ def findMoon(planetNum):
     win32api.SetCursorPos(planetPos)
     window.Roll(1, 8)  # 以行星为中心放大
     time.sleep(0.2)
+    win32api.SetCursorPos((planetPos[0] - 130, planetPos[1] - 130))  # 鼠标移开避免影响识别
+    time.sleep(0.5)
 
     # 截取指定星区图像
     screen, (screen_x, screen_y, _, _) = window.ScreenShot()
@@ -136,12 +148,19 @@ def findMoon(planetNum):
         img = cv2.split(img)[1]
 
         result = cv2.matchTemplate(img, target, cv2.TM_CCORR_NORMED)
-        _, result = cv2.threshold(result, 0.7, 255, cv2.THRESH_BINARY)  # 转化为二值图像
 
-        contours, _ = cv2.findContours(np.uint8(result), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+        threshold = 0.7
+        contours = tryGetMood(result, threshold)
+        while len(contours) < 2:
+            threshold -= 0.01
+            contours = tryGetMood(result, threshold)
+            if len(contours) > 2:
+                print("定位卫星失败")
+                window.imshow(result)
+                exit(1)
         if len(contours) != 2:
-            print("定位卫星失败,获取了%d个可能点" % len(contours))
+            print("定位卫星失败")
+            window.imshow(result)
             exit(1)
         (x1, y1), _ = cv2.minEnclosingCircle(contours[0])
         (x2, y2), _ = cv2.minEnclosingCircle(contours[1])

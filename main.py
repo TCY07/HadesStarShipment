@@ -9,22 +9,24 @@ import win32api
 import win32con
 import window
 import Find
-# import shipmentInfo
+import shipmentInfo
 
 
 if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
 
-
-
-    ''' 本段可实现依次点击星系内所有星球
-    for num in range(1, 17):
-        pos = Find.findPlanet(num, 0)
-        win32api.SetCursorPos(pos)
-        window.LClick(pos)
-
-    window.KeyDown('esc')
+    # # 本段可实现依次点击星系内所有星球
+    # for num in range(16, 17):
+    #     pos = Find.findPlanet(num, 0)
+    #     win32api.SetCursorPos(pos)
+    #     window.LClick(pos)
+    #     window.KeyDown('r')
+    #     print('N-' + str(num))
+    #     shipmentInfo.getPlanetShipment()
+    #     window.KeyDown('esc')
+    #
+    # window.KeyDown('esc')
 
     pos = Find.findMoon(101)
     window.LClick(pos)
@@ -44,7 +46,7 @@ if __name__ == '__main__':
     pos = Find.findMoon(301)
     window.LClick(pos)
     window.Roll(-1, 10)
-    time.sleep(0.5)'''
+    time.sleep(0.5)
 
 
 # ————初始化————

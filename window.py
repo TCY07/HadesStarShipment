@@ -31,8 +31,8 @@ def Init(name):
     time.sleep(0.3)
 
     # 标准化窗口视野
-    KeyDown('1')
-    KeyDown('1')  # 双击某艘船编号
+    KeyDown('1', 0.1)
+    KeyDown('1', 0.1)  # 双击某艘船编号
     KeyDown('F11')  # F11设置为时间调制器的快捷键
     KeyDown('esc')  # esc关闭下方信息窗口
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
