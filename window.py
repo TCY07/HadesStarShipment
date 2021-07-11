@@ -11,8 +11,8 @@ from enum import Enum
 
 
 class WindowName(Enum):
-    shipment = 0
-    info = 1
+    SHIPMENT = 0
+    INFO = 1
 
 
 openedWindow = []
@@ -20,11 +20,12 @@ openedWindow = []
 
 # 打开指定的窗口
 def openWindow(name):
-    if name in openedWindow:
+    if name in openedWindow:  # 已经是打开状态，无需操作
         return
     else:
-        if name == WindowName.shipment:  # 打开货物窗口
+        if name == WindowName.SHIPMENT:  # 打开货物窗口
             KeyDown('r')
+            time.sleep(0.35)
 
 
 # 显示图片（测试用）

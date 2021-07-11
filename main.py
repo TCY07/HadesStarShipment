@@ -15,6 +15,9 @@ import shipmentInfo
 if __name__ == '__main__':
     shipmentInfo.getPlanetShipment()
     exit(0)
+    # 本段主要方便调试，最后可删除
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
 

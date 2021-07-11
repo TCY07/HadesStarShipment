@@ -18,6 +18,11 @@ stop_templa = cv2.cvtColor(stop_templa, cv2.COLOR_RGB2GRAY)
 button4 = cv2.imread('Pictures/button4.PNG')
 button4 = cv2.cvtColor(button4, cv2.COLOR_RGB2GRAY)
 
+empty = cv2.imread('Pictures/cargoship_empty.PNG')
+empty = cv2.split(empty)[2]
+full = cv2.imread('Pictures/cargoship_full.PNG')
+full = cv2.split(full)[2]
+
 
 # 货船状态类型
 class State(Enum):
@@ -39,38 +44,85 @@ def match(img, templa, threshold=0.0):
     return max_val, max_loc
 
 
-# 卸掉所有货物
-def dischargeAll():
-    window.openWindow(window.WindowName.shipment)
-    img, _ = window.ScreenShot()
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
-    _, gray = cv2.threshold(gray, 65, 255, cv2.THRESH_BINARY_INV)  # 二值化
-
-    contours, _ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    conts = shipmentInfo.contoursFilter(contours, 0.535, 170000)  # 过滤得到货物窗口的轮廓
-    (x, y, w, h) = cv2.boundingRect(conts[0])
-    shipmentWindow = gray[y:y + h, x:x + w]  # 截取货物窗口图像
-    _, shipmentWindow = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)
-
-
 # 一艘货船的对象
 class Ship:
     number = 0  # 该货船的编号
     statement = State.UNCLER  # 当前状态
     destination = None  # 当前目的地
     arriveTime = 0  # 到达目的地的时间
+    chosen = False  # 这艘船是否是当前选中目标
 
-    onboardShipment = []  # 搭载的货物
+    # 选中这艘货船
+    def chose(self):
+        if not self.chosen:  # 未被选中（已被选中则无需操作）
+            window.KeyDown(str(self.number))
+            self.chosen = True
 
-    # 载入货物栏最上方的一个货物,要求当前货船处于选中状态
-    def load(self, des):
-        if window.WindowName.shipment not in window.openedWindow:  # 货物窗口未打开
-            # 打开货物窗口
-            window.KeyDown('r')
-            window.openedWindow.append(window.WindowName.shipment)
+    # 装载星球货物栏最上方的一个货物
+    def load(self):
+        # 选中并打开货物窗口
+        self.chose()
+        window.openWindow(window.WindowName.SHIPMENT)
 
-        window.LClick((330, 350))
-        self.onboardShipment.append(des)
+        _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
+        window.LClick((x + 80, y + 120))  # 点击第一个货物的位置
+        print((x + 80, y + 120))
+
+    # 卸载货船货物栏的一个货物,输入参数决定是卸载最上方还是最下方
+    def discharge(self, side):
+        # 选中并打开货物窗口
+        self.chose()
+        window.openWindow(window.WindowName.SHIPMENT)
+
+        _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
+        if side == 'TOP':
+            win32api.SetCursorPos((x + 80, y + 420))
+            window.Roll(1, 50, 0)  # 将货物条拉至最上方
+            window.LClick((x + 80, y + 420))  # 点击第一个货物的位置
+        elif side == 'BOTTOM':
+            win32api.SetCursorPos((x + 80, y + 480))
+            window.Roll(-1, 50, 0)  # 将货物条拉至最下方
+            window.LClick((x + 80, y + 480))  # 点击最后一个货物的位置
+
+    # 装载所有货物（一键装货）
+    def loadAll(self):
+        # 选中并打开货物窗口
+        self.chose()
+        window.openWindow(window.WindowName.SHIPMENT)
+
+        _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
+        window.LClick((x + 195, y + 380))  # 点击一键装货
+
+    # 卸掉所有货物（一键卸货）
+    def dischargeAll(self):
+        # 选中并打开货物窗口
+        self.chose()
+        window.openWindow(window.WindowName.SHIPMENT)
+
+        _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口图像
+        window.LClick((x + 250, y + 380))  # 点击一键卸货
+
+    # 根据图像判断本货船是否有载货
+    def isLoaded(self):
+        # 双击放大选中
+        window.KeyDown(str(self.number))
+        window.KeyDown(str(self.number))
+        time.sleep(0.5)
+
+        img, (x1, y1, x2, y2) = window.ScreenShot()
+        x = int((x2 - x1) / 2) - 40
+        y = int((y2 - y1) / 2) - 35
+        center = img[y:y + 70, x: x + 80]  # 截取中心部分（货船所在位置）
+        center = cv2.split(center)[2]
+        window.imshow(center)
+
+        res1 = cv2.matchTemplate(center, empty, cv2.TM_CCORR_NORMED)
+        res2 = cv2.matchTemplate(center, full, cv2.TM_CCORR_NORMED)
+        _, score1, _, _ = cv2.minMaxLoc(res1)
+        _, score2, _, _ = cv2.minMaxLoc(res2)
+
+        print(score1)
+        print(score2)
 
     # 初始化，获取货船信息
     def __init__(self, num):
@@ -90,7 +142,9 @@ class Ship:
         img, _ = window.ScreenShot()
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
         infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
-        window.imshow(infoWindow)
+
+        # h = infoWindow[115:130, 180:240]
+        # window.imshow(h)
 
         score1, _ = match(infoWindow, stop_templa)
         score2, _ = match(infoWindow, moving_templa)
@@ -104,10 +158,8 @@ class Ship:
         else:  # 状态是“移动至...”
             self.statement = State.MOVING
 
-        print(self.statement)
-
 
 for i in range(5, 6):
-    ship = Ship()
-    ship.load(i)
+    ship = Ship(i)
+    ship.isLoaded()
 

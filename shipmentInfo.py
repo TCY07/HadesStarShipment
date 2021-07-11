@@ -74,10 +74,6 @@ def nameMatch(img):
 
     for i, templa in nameTempla.items():
         _, scores[i], _, _ = cv2.minMaxLoc(cv2.matchTemplate(img, templa, cv2.TM_CCORR_NORMED))
-        # print(scores[i])
-        # img2 = img[5:20, 5:90]
-        # img2 = np.hstack((img2, templa))
-        # window.imshow(img2)
 
     max_Key = max(scores, key=scores.get)
     # print(max_Key)
@@ -114,9 +110,9 @@ def contoursFilter(conts, ar, area):
         return None
 
 
-# 获取货物窗口截图（黑底白字）
+# 获取货物窗口截图（黑底白字）,以及窗口的坐标信息
 def getShipmentWindow():
-    img, _ = window.ScreenShot()
+    img, (x1, y1, _, _) = window.ScreenShot()
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
     _, gray = cv2.threshold(gray, 65, 255, cv2.THRESH_BINARY_INV)  # 二值化
 
@@ -126,7 +122,7 @@ def getShipmentWindow():
     shipmentWindow = gray[y:y + h, x:x + w]  # 截取货物窗口图像
     _, shipmentWindow = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)  # 转换为黑底白字
 
-    return shipmentWindow
+    return shipmentWindow, (x1 + x, y1 + y, w, h)
 
 
 # 将货物窗口拆分成上下两部分，返回需要的部分的货物信息列表
@@ -155,7 +151,7 @@ def shipmentPosition():
     win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
     time.sleep(0.3)
 
-    shipmentWindow = getShipmentWindow()
+    shipmentWindow, _ = getShipmentWindow()
 
     match = cv2.matchTemplate(shipmentWindow, coin, cv2.TM_CCORR_NORMED)
     match1 = cv2.matchTemplate(shipmentWindow, crystal, cv2.TM_CCORR_NORMED)
@@ -194,7 +190,7 @@ def getPlanetShipment():
     i = 0
     info = []
     while 1:
-        win32api.SetCursorPos((330, 350))
+        win32api.SetCursorPos((340, 355))
         # 获取当前可见的货物信息轮廓
         shipmentWindow, conts = shipmentPosition()
         # 获取当前上侧（星球）货物信息列表
