@@ -7,6 +7,24 @@ from PIL import Image, ImageGrab
 import numpy as np
 import cv2
 import data
+from enum import Enum
+
+
+class WindowName(Enum):
+    shipment = 0
+    info = 1
+
+
+openedWindow = []
+
+
+# 打开指定的窗口
+def openWindow(name):
+    if name in openedWindow:
+        return
+    else:
+        if name == WindowName.shipment:  # 打开货物窗口
+            KeyDown('r')
 
 
 # 显示图片（测试用）

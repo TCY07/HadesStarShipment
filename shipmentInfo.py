@@ -38,6 +38,13 @@ templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
 # _, templa = cv2.threshold(templa, 175, 255, cv2.THRESH_BINARY_INV)
 nameTempla[301] = templa
 
+coin = cv2.imread('Pictures/coin.PNG')
+coin = cv2.cvtColor(coin, cv2.COLOR_RGB2GRAY)
+
+crystal = cv2.imread('Pictures/crystal.PNG')
+crystal = cv2.cvtColor(crystal, cv2.COLOR_RGB2GRAY)
+
+
 for i in range(1, 4):
     templa = cv2.imread('Pictures/name' + str(1000 + i) + '.PNG')
     templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
@@ -49,7 +56,6 @@ for i in range(1, 4):
 def detailInfo(img):
     # 目的地信息截图
     numberArea = img[0:25, 80:185]
-    _, numberArea = cv2.threshold(numberArea, 175, 255, cv2.THRESH_BINARY_INV)
 
     # 可用于制作模板
     # numberArea = img[5:20, 90:175]
@@ -108,17 +114,9 @@ def contoursFilter(conts, ar, area):
         return None
 
 
-# 获取当前货物视窗内的货物信息
-def CurrentShipment():
-    handle = win32gui.FindWindow(None, 'Hades\' Star')
-
-    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
-    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
-    # 设置窗口大小/位置
-    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
-    time.sleep(0.3)
-
-    img, _ = window.ScreenShot(handle)
+# 获取货物窗口截图（黑底白字）
+def getShipmentWindow():
+    img, _ = window.ScreenShot()
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
     _, gray = cv2.threshold(gray, 65, 255, cv2.THRESH_BINARY_INV)  # 二值化
 
@@ -126,45 +124,69 @@ def CurrentShipment():
     conts = contoursFilter(contours, 0.535, 170000)  # 过滤得到货物窗口的轮廓
     (x, y, w, h) = cv2.boundingRect(conts[0])
     shipmentWindow = gray[y:y + h, x:x + w]  # 截取货物窗口图像
-    _, shipmentWindow = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)
+    _, shipmentWindow = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)  # 转换为黑底白字
 
-    # s = np.ones((3, 3), np.uint8)
-    # shipmentWindow = cv2.morphologyEx(shipmentWindow, cv2.MORPH_CLOSE, s)  # 开运算，消除小亮点
-    upSide = shipmentWindow[0: 360, :]  # 截取星球货物部分（上侧）
-    coin = cv2.imread('Pictures/coin.PNG')
-    coin = cv2.cvtColor(coin, cv2.COLOR_RGB2GRAY)
-    match = cv2.matchTemplate(upSide, coin, cv2.TM_CCORR_NORMED)
-    crystal = cv2.imread('Pictures/crystal.PNG')
-    crystal = cv2.cvtColor(crystal, cv2.COLOR_RGB2GRAY)
-    match1 = cv2.matchTemplate(upSide, crystal, cv2.TM_CCORR_NORMED)
+    return shipmentWindow
 
-    locs = np.where(match > 0.5)
+
+# 将货物窗口拆分成上下两部分，返回需要的部分的货物信息列表
+def devideInfo(img, conts, part):
+    res = []
+    for ct in conts:
+        (x, y, w, h) = cv2.boundingRect(ct)
+        if part == 'UP' and y < 360:  # 获取当前上侧（星球）货物信息列表
+            cut = img[y:y + h, x:x + w]
+            res.append(detailInfo(cut))
+        elif part == 'BPTTOM' and y > 360:  # 获取当前下侧（货船）货物信息列表
+            cut = img[y:y + h, x:x + w]
+            res.append(detailInfo(cut))
+
+    return res
+
+
+# 获取当前货物视窗内所有货物的信息条轮廓，以及画了轮廓的货物视窗
+def shipmentPosition():
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+
+    # 本段主要方便调试，最后可删除
+    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # 设置窗口大小/位置
+    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    time.sleep(0.3)
+
+    shipmentWindow = getShipmentWindow()
+
+    match = cv2.matchTemplate(shipmentWindow, coin, cv2.TM_CCORR_NORMED)
+    match1 = cv2.matchTemplate(shipmentWindow, crystal, cv2.TM_CCORR_NORMED)
+
+    # 用方框框出每一个货物信息条
+    locs = np.where(match > 0.65)
     for pt in zip(*locs[::-1]):
-        cv2.rectangle(upSide, (pt[0] - 230, pt[1]), (pt[0] + coin.shape[1], pt[1] + coin.shape[0]), (255, 255, 255), 1)
-    locs = np.where(match1 > 0.5)
+        cv2.rectangle(shipmentWindow, (pt[0] - 230, pt[1]), (pt[0] + coin.shape[1], pt[1] + coin.shape[0]),
+                      (255, 255, 255), 1)
+    locs = np.where(match1 > 0.65)
     for pt in zip(*locs[::-1]):
-        cv2.rectangle(upSide, (pt[0] - 230, pt[1]), (pt[0] + coin.shape[1], pt[1] + coin.shape[0]), (255, 255, 255), 1)
-    # window.imshow(upSide)
-    _, upSide = cv2.threshold(upSide, 175, 255, cv2.THRESH_BINARY_INV)
-    contours, hierarch = cv2.findContours(upSide, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.rectangle(shipmentWindow, (pt[0] - 230, pt[1]), (pt[0] + coin.shape[1], pt[1] + coin.shape[0]),
+                      (255, 255, 255), 1)
+
+    # 变为白底黑字，以获得信息条轮廓
+    _, inverse = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)
+
+    # 过滤得到信息条内轮廓
+    contours, hierarch = cv2.findContours(inverse, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    conts = []
     for num in range(len(contours)):
         if hierarch[0][num][3] < 0:  # 该轮廓无父轮廓
             conts.append(contours[num])
-
+    # 再次过滤
     conts = contoursFilter(conts, 5.6, 10000)
 
     # 将轮廓按从上到下排序
     conts = sortContours(conts)
-    if len(conts) != 4:
-        print("出错，读入了%d个数据" % len(conts))
-        exit(1)
-    res = []
-    for ct in conts:
-        (x, y, w, h) = cv2.boundingRect(ct)
-        cut = upSide[y:y + h, x:x + w]
-        res.append(detailInfo(cut))
 
-    return res
+    # 返回货物信息窗口，以及窗口各个货物信息条的轮廓
+    return shipmentWindow, conts
 
 
 # 拉取货物信息窗口的内容，获取该星球上的所有货物列表
@@ -173,9 +195,16 @@ def getPlanetShipment():
     info = []
     while 1:
         win32api.SetCursorPos((330, 350))
-        temp = CurrentShipment()
-        info.append(temp)
-        # print(temp)
+        # 获取当前可见的货物信息轮廓
+        shipmentWindow, conts = shipmentPosition()
+        # 获取当前上侧（星球）货物信息列表
+        res = devideInfo(shipmentWindow, conts, 'UP')
+
+        if len(res) != 4:
+            print("出错，读入了%d个数据" % len(res))
+            exit(1)
+
+        info.append(res)
 
         # 与上一轮读入数据进行比较
         if i != 0:
@@ -184,7 +213,10 @@ def getPlanetShipment():
                     print('货物过少（少于9个）')
                     exit(1)
                 window.Roll(1, 3, 0)
-                back = CurrentShipment()  # 退回3个位置，读入货物信息
+                shipmentWindow, conts = shipmentPosition()
+                back = devideInfo(shipmentWindow, conts, 'UP')  # 退回3个位置，读入货物信息
+
+
                 if info[i - 2] == back:  # 1234 5678 999
                     connectingMode = 0
                     break
@@ -198,8 +230,8 @@ def getPlanetShipment():
                     connectingMode = 3
                     break
 
-        # 按照5-5-4-5-5-5的节奏滚动，可保证每次读入4个新货物的数据
-        if i % 6 == 2:
+        # 按照5-4-5-5-5的节奏滚动，可保证每次读入4个新货物的数据
+        if i % 5 == 1:
             window.Roll(-1, 4, 0)
         else:
             window.Roll(-1, 5, 0)
@@ -208,7 +240,7 @@ def getPlanetShipment():
 
     result = []
     # print(connectingMode)
-    # print(i)
+    # print(info)
     if connectingMode == 0:  # 1234 5678 999
         for num in range(i - 1):
             result.extend(info[num])

@@ -14,40 +14,42 @@ import shipmentInfo
 
 if __name__ == '__main__':
     shipmentInfo.getPlanetShipment()
+    exit(0)
     # 初始化游戏窗口
-    # handle = window.Init('Hades\' Star')
+    handle = window.Init('Hades\' Star')
 
-    ''' # 本段可实现依次点击星系内所有星球
-    for num in range(16, 17):
+    window.KeyDown('7')
+    # 本段可实现依次点击星系内所有星球
+    for num in range(1, 5):
         pos = Find.findPlanet(num, 0)
         win32api.SetCursorPos(pos)
         window.LClick(pos)
-        window.KeyDown('r')
-        print('N-' + str(num))
-        shipmentInfo.getPlanetShipment()
-        window.KeyDown('esc')
+        # window.KeyDown('r')
+        # print('N-' + str(num))
+        # shipmentInfo.getPlanetShipment()
+        # window.KeyDown('esc')
 
     window.KeyDown('esc')
 
-    pos = Find.findMoon(101)
-    window.LClick(pos)
-    window.Roll(-1, 9)
-    time.sleep(0.5)
-
-    pos = Find.findMoon(102)
-    window.LClick(pos)
-    window.Roll(-1, 10)
-    time.sleep(0.5)
-
-    pos = Find.findMoon(201)
-    window.LClick(pos)
-    window.Roll(-1, 9)
-    time.sleep(0.5)
-
-    pos = Find.findMoon(301)
-    window.LClick(pos)
-    window.Roll(-1, 10)
-    time.sleep(0.5)'''
+    # pos = Find.findMoon(101)
+    # window.LClick(pos)
+    # window.Roll(-1, 9)
+    # time.sleep(0.5)
+    #
+    # pos = Find.findMoon(102)
+    # window.LClick(pos)
+    # window.Roll(-1, 10)
+    # time.sleep(0.5)
+    #
+    # pos = Find.findMoon(201)
+    # window.LClick(pos)
+    # window.Roll(-1, 9)
+    # time.sleep(0.5)
+    #
+    # pos = Find.findMoon(301)
+    # window.LClick(pos)
+    # window.Roll(-1, 10)
+    # time.sleep(0.5)
 
 
 # ————初始化————
