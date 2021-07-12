@@ -4,55 +4,76 @@
 import time
 import cv2
 import numpy as np
-import win32gui
-import win32api
-import win32con
+import win32gui, win32api, win32con
 import window
 import Find
 import shipmentInfo
+import cargoShip
+
+
+# 空闲货船列表
+avaShips = []
+# 曲道外星球列表
+outerPlanet = [4, 5, 7, 8, 10]
+# 集货星球
+centerPlanet = 16
+
+# 各类参数
+shipCount = 8  # 货船数量
+outerClear = False  # 初始状态时，曲道外星球是否已人工清空
+
+
+# 点击指定的星球,i用来区分左右击
+def clickPlanet(num, i):
+    pos = Find.findPlanet(num)
+    if i == 0:  # 左键
+        window.LClick(pos)
+    elif i == 1:  # 右键
+        window.RClick(pos)
+
+
+# 获取空闲(停靠+无货物)货船的列表，返回空闲货船个数
+# def getAvailable():
+#     avaShips.clear()
+#     count = 0
+#     for ship in ships.values():
+#         ship.where()
+#         if ship.statement == cargoShip.State.MOVING:  # 非停靠状态
+#             continue
+#         if ship.isLoaded():  # 有载货
+#             continue
+#         avaShips.append(ship)
+#         count += 1
+#     return  count
+
+
+# 集中曲道外星球上的货物
+def gatherOuter():
+    for planet in outerPlanet:
+        for ship in cargoShip.Ship.ships.values():
+            # 此货船停靠在该曲道外星球上
+            if ship.statement == cargoShip.State.STOP_PLANET and ship.destination == planet:
+                    if ship.isLoaded():  # 有载货则全卸掉
+                        ship.dischargeAll()
+                    ship.loadAll()  # 装载星球上的全部货物
+                    # clickPlanet(centerPlanet, 1)  # 前往集货星球
+                    break  # 前进到下一个曲道外星球
 
 
 if __name__ == '__main__':
-    shipmentInfo.getPlanetShipment()
-    exit(0)
-    # 本段主要方便调试，最后可删除
-    handle = win32gui.FindWindow(None, 'Hades\' Star')
-
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
+    # 初始化货船信息
+    for num in range(0, shipCount):
+        cargoShip.Ship(num)
+    # print(cargoShip.Ship.ships)
 
-    window.KeyDown('7')
-    # 本段可实现依次点击星系内所有星球
-    for num in range(1, 5):
-        pos = Find.findPlanet(num, 0)
-        win32api.SetCursorPos(pos)
-        window.LClick(pos)
-        # window.KeyDown('r')
-        # print('N-' + str(num))
-        # shipmentInfo.getPlanetShipment()
-        # window.KeyDown('esc')
+    if outerClear is False:  # 初始时曲道外星球上有货物
+        # 集中曲道外星球上的货物
+        gatherOuter()  # 注意：现要求曲道外各星球均有货船停靠
 
-    window.KeyDown('esc')
 
-    # pos = Find.findMoon(101)
-    # window.LClick(pos)
-    # window.Roll(-1, 9)
-    # time.sleep(0.5)
-    #
-    # pos = Find.findMoon(102)
-    # window.LClick(pos)
-    # window.Roll(-1, 10)
-    # time.sleep(0.5)
-    #
-    # pos = Find.findMoon(201)
-    # window.LClick(pos)
-    # window.Roll(-1, 9)
-    # time.sleep(0.5)
-    #
-    # pos = Find.findMoon(301)
-    # window.LClick(pos)
-    # window.Roll(-1, 10)
-    # time.sleep(0.5)
+
 
 
 # ————初始化————

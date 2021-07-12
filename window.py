@@ -24,8 +24,10 @@ def openWindow(name):
         return
     else:
         if name == WindowName.SHIPMENT:  # 打开货物窗口
+            openedWindow.append(name)
             KeyDown('r')
-            time.sleep(0.35)
+
+    time.sleep(0.5)
 
 
 # 显示图片（测试用）

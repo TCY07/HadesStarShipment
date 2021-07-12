@@ -118,6 +118,7 @@ def getShipmentWindow():
 
     contours, _ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     conts = contoursFilter(contours, 0.535, 170000)  # 过滤得到货物窗口的轮廓
+    # window.imshow(gray)
     (x, y, w, h) = cv2.boundingRect(conts[0])
     shipmentWindow = gray[y:y + h, x:x + w]  # 截取货物窗口图像
     _, shipmentWindow = cv2.threshold(shipmentWindow, 175, 255, cv2.THRESH_BINARY_INV)  # 转换为黑底白字
@@ -144,12 +145,12 @@ def devideInfo(img, conts, part):
 def shipmentPosition():
     handle = win32gui.FindWindow(None, 'Hades\' Star')
 
-    # 本段主要方便调试，最后可删除
-    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
-    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
-    # 设置窗口大小/位置
-    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
-    time.sleep(0.3)
+    # # 本段主要方便调试，最后可删除
+    # win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    # win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # # 设置窗口大小/位置
+    # win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    # time.sleep(0.3)
 
     shipmentWindow, _ = getShipmentWindow()
 
