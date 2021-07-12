@@ -63,11 +63,11 @@ def detailInfo(img):
     # cv2.imwrite('Pictures/name8.PNG', numberArea)
     # window.imshow(numberArea, '模板')
 
-    planetName = nameMatch(numberArea)
+    planetName, _ = nameMatch(numberArea)
     return planetName
 
 
-# 传入星球名字截图，返回星球序号
+# 传入星球名字截图，返回星球序号和对应的匹配分数
 def nameMatch(img):
     # 记录匹配得分
     scores = {}
@@ -78,7 +78,7 @@ def nameMatch(img):
     max_Key = max(scores, key=scores.get)
     # print(max_Key)
 
-    return max_Key
+    return max_Key, scores[max_Key]
 
 
 # 将输入的轮廓按从上到下排序

@@ -11,23 +11,45 @@ import win32api
 import time
 
 # 读入匹配模板
+# “移动至”
 moving_templa = cv2.imread('Pictures/moving.PNG')
 moving_templa = cv2.cvtColor(moving_templa, cv2.COLOR_RGB2GRAY)
+# “泊靠在”
 stop_templa = cv2.imread('Pictures/stop.PNG')
 stop_templa = cv2.cvtColor(stop_templa, cv2.COLOR_RGB2GRAY)
+# 第四个按钮
 button4 = cv2.imread('Pictures/button4.PNG')
 button4 = cv2.cvtColor(button4, cv2.COLOR_RGB2GRAY)
+# “太空曲道枢纽”
+warplane = cv2.imread('Pictures/warplane.PNG')
+warplane = cv2.cvtColor(warplane, cv2.COLOR_RGB2GRAY)
 
-empty = cv2.imread('Pictures/cargoship_empty.PNG')
-empty = cv2.split(empty)[2]
-full = cv2.imread('Pictures/cargoship_full.PNG')
-full = cv2.split(full)[2]
+# 读入曲道外星球的信息窗口名字模板
+nameTempla = {}
+templa = cv2.imread('Pictures/info4.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[4] = templa
+templa = cv2.imread('Pictures/info5.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[5] = templa
+templa = cv2.imread('Pictures/info7.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[7] = templa
+templa = cv2.imread('Pictures/info8.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[8] = templa
+templa = cv2.imread('Pictures/info10.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[10] = templa
+templa = cv2.imread('Pictures/info16.PNG')
+templa = cv2.cvtColor(templa, cv2.COLOR_RGB2GRAY)
+nameTempla[16] = templa
 
 
 # 货船状态类型
 class State(Enum):
     UNCLER = 0
-    STOP_STATION = 1
+    STOP_PLANET = 1
     STOP_ELSEWHERE = 2
     MOVING = 3
 
@@ -44,12 +66,26 @@ def match(img, templa, threshold=0.0):
     return max_val, max_loc
 
 
+# 传入目的地信息截图，返回可能的星球序号和对应的匹配分数
+def nameMatch(img):
+    # 记录匹配得分
+    scores = {}
+
+    for i, templa in nameTempla.items():
+        _, scores[i], _, _ = cv2.minMaxLoc(cv2.matchTemplate(img, templa, cv2.TM_CCORR_NORMED))
+
+    max_Key = max(scores, key=scores.get)
+    # print(max_Key)
+
+    return max_Key, scores[max_Key]
+
+
 # 一艘货船的对象
 class Ship:
-    number = 0  # 该货船的编号
+    number = None  # 该货船的编号
     statement = State.UNCLER  # 当前状态
     destination = None  # 当前目的地
-    arriveTime = 0  # 到达目的地的时间
+    arriveTime = 0  # 估计到达目的地的时间
     chosen = False  # 这艘船是否是当前选中目标
 
     # 选中这艘货船
@@ -57,6 +93,7 @@ class Ship:
         if not self.chosen:  # 未被选中（已被选中则无需操作）
             window.KeyDown(str(self.number))
             self.chosen = True
+            time.sleep(0.5)
 
     # 装载星球货物栏最上方的一个货物
     def load(self):
@@ -102,39 +139,34 @@ class Ship:
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口图像
         window.LClick((x + 250, y + 380))  # 点击一键卸货
 
-    # 根据图像判断本货船是否有载货
-    def isLoaded(self):
-        # 双击放大选中
-        window.KeyDown(str(self.number))
-        window.KeyDown(str(self.number))
-        time.sleep(0.5)
+    # 更新并返回本货船的目的地/停靠点信息
+    def where(self):
+        self.chose()
+        img, _ = window.ScreenShot()
+        gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
+        infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
+        destination = infoWindow[10:60, 50:150]  # 截取目的地/停靠点名字
+        _, destination = cv2.threshold(destination, 120, 255, cv2.THRESH_BINARY)  # 二值化
+        # window.imshow(destination)
 
-        img, (x1, y1, x2, y2) = window.ScreenShot()
-        x = int((x2 - x1) / 2) - 40
-        y = int((y2 - y1) / 2) - 35
-        center = img[y:y + 70, x: x + 80]  # 截取中心部分（货船所在位置）
-        center = cv2.split(center)[2]
-        window.imshow(center)
+        num, score1 = nameMatch(destination)  # 在星球中获取最可能的目的地及其对应分数
+        # 进一步与非星球目的地进行比对
+        _, score2, _, _ = cv2.minMaxLoc(cv2.matchTemplate(destination, warplane, cv2.TM_CCORR_NORMED))  # 曲道枢纽
 
-        res1 = cv2.matchTemplate(center, empty, cv2.TM_CCORR_NORMED)
-        res2 = cv2.matchTemplate(center, full, cv2.TM_CCORR_NORMED)
-        _, score1, _, _ = cv2.minMaxLoc(res1)
-        _, score2, _, _ = cv2.minMaxLoc(res2)
+        print(num, score1, score2)
+        if max(score1, score2) < 0.75:  # 目的地是贸易站或曲道内星球
+            self.destination = 1000
+        elif score1 > score2:  # 目的地是曲道外星球或集货星球
+            self.destination = num
+        else:  # 目的地是曲道枢纽
+            self.destination = 0
 
-        print(score1)
-        print(score2)
+        print(self.destination)
+        return self.destination
 
     # 初始化，获取货船信息
     def __init__(self, num):
         self.number = num  # 获取编号
-
-        # 本段主要方便调试，最后可删除
-        handle = win32gui.FindWindow(None, 'Hades\' Star')
-        win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
-        win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
-        # 设置窗口大小/位置
-        win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
-        time.sleep(0.3)
 
         # window.KeyDown(str(num))
         # time.sleep(0)
@@ -143,7 +175,8 @@ class Ship:
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
         infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
 
-        # h = infoWindow[115:130, 180:240]
+        # h = infoWindow[10:60, 50:150]
+        # _, h = cv2.threshold(h, 120, 255, cv2.THRESH_BINARY)
         # window.imshow(h)
 
         score1, _ = match(infoWindow, stop_templa)
@@ -151,7 +184,7 @@ class Ship:
 
         if score1 > score2:  # 状态是“泊靠在”
             if match(infoWindow, button4, 0.95) is not None:  # 检测到货物按钮
-                self.statement = State.STOP_STATION  # 停靠在星球或贸易站上
+                self.statement = State.STOP_PLANET  # 停靠在星球或贸易站上
 
             else:
                 self.statement = State.STOP_ELSEWHERE  # 停靠在其他地方
@@ -159,7 +192,25 @@ class Ship:
             self.statement = State.MOVING
 
 
-for i in range(5, 6):
+# 本段主要方便调试，最后可删除
+handle = win32gui.FindWindow(None, 'Hades\' Star')
+win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+# 设置窗口大小/位置
+win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+time.sleep(0.3)
+
+# img, _ = window.ScreenShot()
+# gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
+# infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
+#
+# h = infoWindow[35:48, 50:90]
+# _, h = cv2.threshold(h, 120, 255, cv2.THRESH_BINARY)
+# cv2.imwrite('Pictures/info16.PNG', h)
+# window.imshow(h)
+
+
+for i in range(9, 10):
     ship = Ship(i)
-    ship.isLoaded()
+    ship.where()
 
