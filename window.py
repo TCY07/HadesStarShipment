@@ -19,6 +19,7 @@ class WindowName(Enum):
 openedWindow = []
 locationInfo = {}  # 星球坐标信息
 
+
 # 打开指定的窗口
 def openWindow(name):
     if name in openedWindow:  # 已经是打开状态，无需操作

@@ -11,13 +11,14 @@ import data
 
 # 通过星球编号number，从传入图像background中查找星球坐标
 def match(number, background, tolerance):
-    if isinstance(number, int):
+    if isinstance(number, int) and number < 1000:
         filename = 'Pictures/' + str(number) + '.PNG'
     else:
         filename = 'Pictures/center.PNG'
     target = cv2.imread(filename)
-    target = cv2.cvtColor(target, cv2.COLOR_RGB2GRAY)
-    background = cv2.cvtColor(background, cv2.COLOR_RGB2GRAY)
+    target = cv2.split(target)[1]
+    background = cv2.split(background)[1]
+    # window.imshow(background)
 
     result = cv2.matchTemplate(background, target, cv2.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)

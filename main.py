@@ -11,8 +11,8 @@ import shipmentInfo
 import cargoShip
 
 
-# 空闲货船列表
-avaShips = []
+# 计时器
+TIME = 0
 # 曲道外星球列表
 outerPlanet = [4, 5, 7, 8, 10]
 # 集货星球
@@ -32,32 +32,21 @@ def clickPlanet(num, i):
         window.RClick(pos)
 
 
-# 获取空闲(停靠+无货物)货船的列表，返回空闲货船个数
-# def getAvailable():
-#     avaShips.clear()
-#     count = 0
-#     for ship in ships.values():
-#         ship.where()
-#         if ship.statement == cargoShip.State.MOVING:  # 非停靠状态
-#             continue
-#         if ship.isLoaded():  # 有载货
-#             continue
-#         avaShips.append(ship)
-#         count += 1
-#     return  count
-
-
 # 集中曲道外星球上的货物
 def gatherOuter():
     for planet in outerPlanet:
         for ship in cargoShip.Ship.ships.values():
             # 此货船停靠在该曲道外星球上
-            if ship.statement == cargoShip.State.STOP_PLANET and ship.destination == planet:
-                    if ship.isLoaded():  # 有载货则全卸掉
-                        ship.dischargeAll()
-                    ship.loadAll()  # 装载星球上的全部货物
-                    # clickPlanet(centerPlanet, 1)  # 前往集货星球
-                    break  # 前进到下一个曲道外星球
+            if ship.statement == cargoShip.State.STOP and ship.destination == planet:
+                # 创建任务
+                m = [
+                    [planet, cargoShip.ACTION.LoadAll],
+                    [1003, cargoShip.ACTION.Arriving],
+                    [1003, cargoShip.ACTION.DischargeOuter_TOP],
+                    [centerPlanet, cargoShip.ACTION.DischargeAll]
+                ]
+                # 进入任务列表
+                cargoShip.Mission(ship, m)
 
 
 if __name__ == '__main__':
@@ -65,18 +54,17 @@ if __name__ == '__main__':
     handle = window.Init('Hades\' Star')
     # window.savePlanetLocation()
     window.getPlanetLocation()
-    for num in range(1, 17):
-        pos, _ = Find.findPlanet(num)
-        window.LClick(pos)
-    exit(0)
     # 初始化货船信息
-    for num in range(0, shipCount):
+    for num in range(1, 2):
         cargoShip.Ship(num)
-    # print(cargoShip.Ship.ships)
 
     if outerClear is False:  # 初始时曲道外星球上有货物
-        # 集中曲道外星球上的货物
-        gatherOuter()  # 注意：现要求曲道外各星球均有货船停靠
+        # 创建任务列表：集中曲道外星球上的货物
+        gatherOuter()  # （注意：现要求曲道外各星球均有货船停靠）
+    # 遍历任务列表并执行
+    while True:
+        for m in cargoShip.Mission.missions:
+            m.act(time.time())
 
 
 

@@ -9,6 +9,7 @@ import win32gui
 import win32con
 import win32api
 import time
+import Find
 
 # 读入匹配模板
 # “移动至”
@@ -49,9 +50,8 @@ nameTempla[16] = templa
 # 货船状态类型
 class State(Enum):
     UNCLER = 0
-    STOP_PLANET = 1
-    STOP_ELSEWHERE = 2
-    MOVING = 3
+    STOP = 1
+    MOVING = 2
 
 
 # 进行模板匹配
@@ -85,15 +85,20 @@ class Ship:
     # 货船列表
     ships = {}
 
-    number = None  # 该货船的编号
-    statement = State.UNCLER  # 当前状态
-    destination = None  # 当前目的地
-    arriveTime = 0  # 估计到达目的地的时间
-    chosen = False  # 这艘船是否是当前选中目标
-    loaded = False  # 这艘船是否有载货
+    # 初始化，获取货船信息
+    def __init__(self, num):
+        Ship.ships[num] = self  # 将自身添加到货船列表
+
+        self.number = num  # 该货船的编号
+        self.chosen = False  # 这艘船是否是当前选中目标
+        self.loaded = False  # 这艘船是否有载货
+        self.statement, self.destination = self.where()  # 当前运动状态，以及当前目的地
+
+        # # 获取载货状态
+        # self.isLoaded()
 
     # 选中这艘货船
-    def chose(self):
+    def choose(self):
         if not self.chosen:  # 未被选中（已被选中则无需操作）
             # 取消所有货船的选中状态
             for item in self.ships.values():
@@ -107,7 +112,7 @@ class Ship:
     # 装载星球货物栏最上方的一个货物
     def load(self):
         # 选中并打开货物窗口
-        self.chose()
+        self.choose()
         window.openWindow(window.WindowName.SHIPMENT)
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
@@ -117,7 +122,7 @@ class Ship:
     # 判断该货船上有无货物，并更新货物信息
     def isLoaded(self):
         self.where()
-        if self.statement == State.STOP_PLANET:  # 停靠在货点
+        if self.statement == State.STOP:  # 停靠状态
             window.openWindow(window.WindowName.SHIPMENT)
             # 判断货船内有无货物
             shipmentWindow, conts = shipmentInfo.shipmentPosition()
@@ -133,7 +138,7 @@ class Ship:
     # 卸载货船货物栏的一个货物,输入参数决定是卸载最上方还是最下方
     def discharge(self, side):
         # 选中并打开货物窗口
-        self.chose()
+        self.choose()
         window.openWindow(window.WindowName.SHIPMENT)
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
@@ -149,7 +154,7 @@ class Ship:
     # 装载所有货物（一键装货）
     def loadAll(self):
         # 选中并打开货物窗口
-        self.chose()
+        self.choose()
         window.openWindow(window.WindowName.SHIPMENT)
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
@@ -161,7 +166,7 @@ class Ship:
     # 卸掉所有货物（一键卸货）
     def dischargeAll(self):
         # 选中并打开货物窗口
-        self.chose()
+        self.choose()
         window.openWindow(window.WindowName.SHIPMENT)
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口图像
@@ -170,9 +175,9 @@ class Ship:
         win32api.SetCursorPos((x + 120, y + 380))  # 鼠标移开，避免影响轮廓检测
         time.sleep(0.1)
 
-    # 更新本货船的状态，并返回目的地/停靠点信息
+    # 更新并返回本货船的移动状态，以及目的地/停靠点信息
     def where(self):
-        self.chose()
+        self.choose()
 
         # 获取货船移动状态
         img, _ = window.ScreenShot()
@@ -182,11 +187,7 @@ class Ship:
         score1, _ = match(infoWindow, stop_templa)
         score2, _ = match(infoWindow, moving_templa)
         if score1 > score2:  # 状态是“泊靠在”
-            if match(infoWindow, button4, 0.95) is not None:  # 检测到货物按钮
-                self.statement = State.STOP_PLANET  # 停靠在星球或贸易站上
-
-            else:
-                self.statement = State.STOP_ELSEWHERE  # 停靠在其他地方
+            self.statement = State.STOP  # 停靠在星球或贸易站上
         else:  # 状态是“移动至...”
             self.statement = State.MOVING
 
@@ -198,26 +199,128 @@ class Ship:
         # 进一步与非星球目的地进行比对
         _, score2, _, _ = cv2.minMaxLoc(cv2.matchTemplate(destination, warplane, cv2.TM_CCORR_NORMED))  # 曲道枢纽
 
-        if max(score1, score2) < 0.75:  # 目的地是贸易站或曲道内星球
+        if max(score1, score2) < 0.9:  # 目的地是贸易站或曲道内星球
             self.destination = 1000
         elif score1 > score2:  # 目的地是曲道外星球或集货星球
             self.destination = num
         else:  # 目的地是曲道枢纽
             self.destination = 0
 
-        print(self.number, self.destination)
-        return self.destination
+        # print(self.number, self.destination)
+        return self.statement, self.destination
 
-    # 初始化，获取货船信息
-    def __init__(self, num):
-        self.ships[num] = self
 
-        self.number = num  # 获取编号
+class ACTION(Enum):
+    Arriving = 0  # 前往并停靠在某处
+    Passing = 1  # 经过且不停靠某处
+    DischargeAll = 2  # 在当前停靠点卸载全部货物
+    LoadAll = 3  # 装载当前停靠点的全部货物
+    DischargeOuter_TOP = 4  # 在当前停靠点卸载曲道外和集货星球货物（从上方）
 
-        # 获取货船移动状态，和停靠点
-        self.where()
-        # # 获取载货状态
-        # self.isLoaded()
+
+# 货船执行的任务
+class Mission:
+    # 执行中的任务列表
+    missions = []
+
+    # way_act是传入的action列表，形如[[1003, ACTION], [16, ACTION]]
+    def __init__(self, ship, way_act):
+        Mission.missions.append(self)
+
+        self.master = ship  # 本任务由哪一艘货船执行
+        self.checkTime = -1  # 需要查验任务完成情况的时间，负数表示未设置
+        self.process = 0  # 当前正在wayPoints中的第几项
+
+        # 安排任务具体内容
+        self.actions = way_act  # 需要经过的地点：经过或到达每个地点后需要完成的动作（装载、卸载、取消航线等）
+
+    # 检查当前移动任务的完成进度若任务已完成则返回True
+    def checkMovingStatus(self):
+        statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
+
+        # 执行的任务是--到达某处
+        if self.actions[self.process][1] == ACTION.Arriving:
+            if statement == State.STOP:  # 已到达目的地
+                self.process += 1  # 进行到下一步
+                self.checkTime = -1
+                return True
+            else:
+                return False
+        # 执行的任务是--经过（不停靠）某处
+        elif self.actions[self.process][1] == ACTION.Passing:
+            if destination != self.actions[self.process][0] and statement == State.MOVING:  # 处于移动中，已经过该处
+                self.process += 1  # 进行到下一步
+                self.checkTime = -1
+                return True
+            else:
+                return False
+
+    # 检查货物装/卸载任务的完成情况。若任务已完成则返回True
+    def checkCargoStatus(self):
+        # 执行的任务是--卸载所有载货
+        if self.actions[self.process][1] == ACTION.DischargeAll:
+            if not self.master.isLoaded():  # 货物已经卸载完全
+                self.process += 1
+                return True
+            else:
+                return False
+        # 执行的任务是--装载所有载货
+        elif self.actions[self.process][1] == ACTION.LoadAll:
+            self.master.choose()
+            window.openWindow(window.WindowName.SHIPMENT)
+
+            shipmentWindow, conts = shipmentInfo.shipmentPosition()
+            res = shipmentInfo.devideInfo(shipmentWindow, conts, 'UP')
+            if len(res) == 0:  # 已经全部装载
+                self.process += 1
+                return True
+            else:
+                return False
+        # 执行的任务是--卸载曲道外载货
+        elif self.actions[self.process][1] == ACTION.DischargeOuter:
+            # 选中并打开货物窗口
+            window.openWindow(window.WindowName.SHIPMENT)
+
+    # 执行当前任务,传入当前时间判断是否需要进行移动状态检查
+    def act(self, time_):
+        # 任务是--装载所有货物
+        if self.actions[self.process][1] == ACTION.LoadAll:
+            # 检查任务是否完成，完成则进入下一个任务阶段
+            if self.checkCargoStatus():
+                return
+            # 任务还未完成
+            if self.master.isLoaded():  # 有载货则全卸掉
+                self.master.dischargeAll()
+            self.master.loadAll()  # 装载星球上的全部货物
+            # 再次检查任务是否完成
+            self.checkCargoStatus()
+
+        # 任务是--到达某处
+        elif self.actions[self.process][1] == ACTION.Arriving:
+            if time_ < self.checkTime and self.checkTime > 0:  # 还未到检查时间
+                return
+
+            statement, destination = self.master.where()
+            if statement == State.STOP:  # 现在处于停靠状态
+                # 尚未出发
+                if self.checkTime < 0:
+                    pos, _ = Find.findPlanet(self.actions[self.process][0])
+                    # 右键双击
+                    window.RClick(pos)
+                    time.sleep(0.3)
+                    window.RClick(pos)
+                    time.sleep(2)
+
+                    # 设置下次检查时间
+                    self.checkTime = time.time() + 45
+                # 已经移动到目标点
+                else:
+                    self.checkMovingStatus()
+                    exit(0)
+            elif statement == State.MOVING:  # 现在处于移动状态
+                self.checkTime = time.time() + 10
+
+
 
 
 # 本段主要方便调试，最后可删除
