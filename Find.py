@@ -16,24 +16,19 @@ def match(number, background, tolerance):
     else:
         filename = 'Pictures/center.PNG'
     target = cv2.imread(filename)
-    target = cv2.split(target)[1]
-    background = cv2.split(background)[1]
-    # window.imshow(background)
-    result = cv2.matchTemplate(background, target, cv2.TM_CCORR_NORMED)
+    target = cv2.cvtColor(target, cv2.COLOR_RGB2GRAY)
+    background = cv2.cvtColor(background, cv2.COLOR_RGB2GRAY)
 
+    result = cv2.matchTemplate(background, target, cv2.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-    # if method in [cv.TM_SQDIFF, cv.TM_SQDIFF_NORMED]:
-    #     top_left = min_loc
-    # else:
-    #     top_left = max_loc
-    #     bottom_right = (top_left[0] + w, top_left[1] + h)
+
     if tolerance > 0:
         if max_val > tolerance:
             x = max_loc[0] + 0.5 * target.shape[1]
             y = max_loc[1] + 0.5 * target.shape[0]
             return int(x), int(y)
         else:
-            print("星球%d匹配失败" % number)
+            # print("星球%d匹配失败" % number)
             return None
     elif tolerance < 0:
         if min_val < -tolerance:
@@ -41,19 +36,8 @@ def match(number, background, tolerance):
             y = max_loc[1] + 0.5 * target.shape[0]
             return int(x), int(y)
         else:
-            print("星球%d匹配失败" % number)
+            # print("星球%d匹配失败" % number)
             return None
-
-    # if len(locs[0]) == 0:
-    #     print("星球%d模板匹配失败" % number)
-    #     return None
-    #
-    # x = y = 0
-    # for pt in zip(*locs[::-1]):
-    #     x += pt[0] + 0.5 * target.shape[1]
-    #     y += pt[1] + 0.5 * target.shape[0]
-    #
-    # loc = (int(x / len(locs[0])), int(y / len(locs[0])))
 
 
 # 返回指定星球的屏幕坐标
@@ -106,8 +90,11 @@ def findPlanet(planetNum, tolerance=0):
     loc = match(planetNum, img, 0.4)
     # 在屏幕中的坐标
     pos = (screen_x + loc[0] + x1, screen_y + loc[1] + y1)
+    # 星球在星区坐标系下的坐标
+    pos1 = (up_left[0] + x1 + loc[0], up_left[1] + y1 + loc[1])
 
-    return pos
+    # 返回星球的：屏幕坐标，星区坐标
+    return pos, pos1
 
 
 # 尝试在结果图中找到两颗卫星的轮廓
@@ -123,7 +110,7 @@ def tryGetMood(result, threshold):
 # 找卫星
 def findMoon(planetNum):
     # 先找所环绕的行星
-    planetPos = findPlanet(int(planetNum / 100), -250)
+    planetPos, _ = findPlanet(int(planetNum / 100), -250)
     win32api.SetCursorPos(planetPos)
     window.Roll(1, 8)  # 以行星为中心放大
     time.sleep(0.2)

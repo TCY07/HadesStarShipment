@@ -25,7 +25,7 @@ outerClear = False  # 初始状态时，曲道外星球是否已人工清空
 
 # 点击指定的星球,i用来区分左右击
 def clickPlanet(num, i):
-    pos = Find.findPlanet(num)
+    pos, _ = Find.findPlanet(num)
     if i == 0:  # 左键
         window.LClick(pos)
     elif i == 1:  # 右键
@@ -63,6 +63,12 @@ def gatherOuter():
 if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
+    # window.savePlanetLocation()
+    window.getPlanetLocation()
+    for num in range(1, 17):
+        pos, _ = Find.findPlanet(num)
+        window.LClick(pos)
+    exit(0)
     # 初始化货船信息
     for num in range(0, shipCount):
         cargoShip.Ship(num)

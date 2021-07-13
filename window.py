@@ -6,6 +6,7 @@ import win32api
 from PIL import Image, ImageGrab
 import numpy as np
 import cv2
+import Find
 import data
 from enum import Enum
 
@@ -16,7 +17,7 @@ class WindowName(Enum):
 
 
 openedWindow = []
-
+locationInfo = {}  # 星球坐标信息
 
 # 打开指定的窗口
 def openWindow(name):
@@ -55,7 +56,7 @@ def Init(name):
     KeyDown('1', 0.1)
     KeyDown('1', 0.1)  # 双击某艘船编号
     KeyDown('F11')  # F11设置为时间调制器的快捷键
-    KeyDown('esc')  # esc关闭下方信息窗口
+    # KeyDown('esc')  # esc关闭下方信息窗口
     x1, y1, x2, y2 = win32gui.GetWindowRect(handle)
     pos = (int((x1+x2)/2), int((y1+y2+35)/2))
     win32api.SetCursorPos(pos)
@@ -121,24 +122,20 @@ def sunPosition(handle=None):
 
     # 计算黄星中心相对于图片中心坐标
     contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    if len(contours) == 0:
-        print("视野中没有找到黄星，正在重试...")
-        Init('Hades\' Star')
-        screen, _ = ScreenShot(handle)  # 窗口截图
-
-        # 找到黄星
-        s = np.ones((20, 20), np.uint8)
-        opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
-        grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
-        _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
-
-        # 计算黄星中心相对于图片中心坐标
-        contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        if len(contours) == 0:
-            print("视野中没有找到黄星")
-            exit(1)
-        else:
-            print("重试成功")
+    if len(contours) == 0:  # 视野中没有找到黄星
+        print("视野中没有找到黄星，通过其他星球计算")
+        # 通过视野中的其他星球定位
+        for num in range(1, 17):
+            loc = Find.match(num, screen, 0.9)
+            if loc is not None:  # 该星球出现在视野中
+                # 从该星球坐标推算黄星坐标
+                print('以星球%d为基准' % num)
+                location = (int(loc[0] - locationInfo[num][0] - 700),
+                            int(loc[1] - locationInfo[num][1] - 442))
+                print(location)
+                return location
+        print("视野定位失败")
+        exit(1)
 
     (x, y), _ = cv2.minEnclosingCircle(contours[0])
     # 如果有多个疑似点，则选择面积最大的点视为黄星
@@ -179,5 +176,27 @@ def Relocate(pos, tolerance=50):
         current = sunPosition()
         y = pos[1] - current[1]
 
+
+# 获取星球坐标信息并保存到本地
+def savePlanetLocation():
+    info = {}
+    for num in range(1, 17):
+        _, loc = Find.findPlanet(num)  # 获取星球的星区坐标
+        info[num] = loc
+    fileObject = open('locationInfo.txt', 'w')
+    fileObject.write(str(info))
+    fileObject.close()
+
+
+# 读取星球位置信息文件
+def getPlanetLocation():
+    global locationInfo
+    try:
+        fileObject = open('locationInfo.txt', 'r')
+    except IOError:
+        savePlanetLocation()
+        fileObject = open('locationInfo.txt', 'r')
+    locationInfo = eval(fileObject.read())
+    fileObject.close()
 
 
