@@ -134,7 +134,7 @@ def devideInfo(img, conts, part):
         if part == 'UP' and y < 360:  # 获取当前上侧（星球）货物信息列表
             cut = img[y:y + h, x:x + w]
             res.append(detailInfo(cut))
-        elif part == 'BPTTOM' and y > 360:  # 获取当前下侧（货船）货物信息列表
+        elif part == 'BOTTOM' and y > 360:  # 获取当前下侧（货船）货物信息列表
             cut = img[y:y + h, x:x + w]
             res.append(detailInfo(cut))
 
@@ -143,15 +143,6 @@ def devideInfo(img, conts, part):
 
 # 获取当前货物视窗内所有货物的信息条轮廓，以及画了轮廓的货物视窗
 def shipmentPosition():
-    handle = win32gui.FindWindow(None, 'Hades\' Star')
-
-    # # 本段主要方便调试，最后可删除
-    # win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
-    # win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
-    # # 设置窗口大小/位置
-    # win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
-    # time.sleep(0.3)
-
     shipmentWindow, _ = getShipmentWindow()
 
     match = cv2.matchTemplate(shipmentWindow, coin, cv2.TM_CCORR_NORMED)
@@ -198,21 +189,41 @@ def getPlanetShipment():
         res = devideInfo(shipmentWindow, conts, 'UP')
 
         if len(res) != 4:
-            print("出错，读入了%d个数据" % len(res))
-            exit(1)
+            if i > 1:
+                print("错误！期望读入4个数据，但读入了%d个" % len(res))
+                exit(1)
+            elif i == 1 and len(info[0]) == 4:
+                print("错误！期望读入4个数据，但读入了%d个" % len(res))
+                exit(1)
 
         info.append(res)
 
         # 与上一轮读入数据进行比较
         if i != 0:
             if info[i] == info[i - 1]:  # 与上一轮读入数据完全相同，视为已读到结尾
-                if i < 3:
-                    print('货物过少（少于9个）')
-                    exit(1)
+                if i == 1:
+                    return info[0]
+                elif i == 2:
+                    result = []
+                    if info[1][0] == info[0][3]:
+                        result.extend(info[0])
+                        result.extend([info[1][1], info[1][2], info[1][3]])
+                        return result
+                    elif info[1][0] == info[0][2]:
+                        result.extend(info[0])
+                        result.extend([info[1][2], info[1][3]])
+                        return result
+                    elif info[1][0] == info[0][1]:
+                        result.extend(info[0])
+                        result.append(info[1][3])
+                        return result
+                    else:
+                        result.extend(info[0])
+                        result.extend(info[1])
+                        return result
                 window.Roll(1, 3, 0)
                 shipmentWindow, conts = shipmentPosition()
                 back = devideInfo(shipmentWindow, conts, 'UP')  # 退回3个位置，读入货物信息
-
 
                 if info[i - 2] == back:  # 1234 5678 999
                     connectingMode = 0
@@ -232,7 +243,7 @@ def getPlanetShipment():
             window.Roll(-1, 4, 0)
         else:
             window.Roll(-1, 5, 0)
-        time.sleep(0.1)
+        time.sleep(0.25)
         i += 1
 
     result = []
@@ -254,6 +265,18 @@ def getPlanetShipment():
         for num in range(i):
             result.extend(info[num])
 
-    print(result)
+    return result
+
+
+# 调试用
+if __name__ == '__main__':
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # 设置窗口大小/位置
+    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    time.sleep(0.3)
+
+    print(getPlanetShipment())
 
 

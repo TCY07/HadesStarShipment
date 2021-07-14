@@ -32,6 +32,18 @@ def openWindow(name):
     time.sleep(0.5)
 
 
+# 关闭指定的窗口
+def closeWindow(name):
+    if name not in openedWindow:  # 已经是关闭状态，无需操作
+        return
+    else:
+        if name == WindowName.SHIPMENT:  # 关闭货物窗口
+            openedWindow.remove(name)
+            KeyDown('r')
+
+    time.sleep(0.5)
+
+
 # 显示图片（测试用）
 def imshow(img, name=''):
     cv2.imshow(name, img)
@@ -84,6 +96,7 @@ def ScreenShot(handle=None):
 def LClick(pos):
     win32api.SetCursorPos(pos)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, pos[0], pos[1], 0, 0)
+    time.sleep(0.1)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, pos[0], pos[1], 0, 0)
 
 
@@ -91,6 +104,7 @@ def LClick(pos):
 def RClick(pos):
     win32api.SetCursorPos(pos)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, pos[0], pos[1], 0, 0)
+    time.sleep(0.1)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, pos[0], pos[1], 0, 0)
 
 
