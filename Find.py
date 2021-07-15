@@ -4,7 +4,7 @@ import time
 
 import cv2
 import numpy as np
-import win32api
+import win32api, win32gui, win32con
 import window
 import data
 
@@ -44,25 +44,29 @@ def match(number, background, tolerance):
 # 返回指定星球的屏幕坐标
 # 让指定的星区进入视野范围,tolerance容忍星区不完全在视野内
 def findPlanet(planetNum, tolerance=0):
-    sectorName = data.PLANET_SECTOR[planetNum]
-    sector_x, sector_y = data.sectorPostion(sectorName)
-
     sunPos = window.sunPosition()
     # 当前屏幕视野范围（星系坐标）
     up_left = (-700 - sunPos[0], -442 - sunPos[1])
     down_right = (700 - sunPos[0], 442 - sunPos[1])
 
+    sectorName = data.PLANET_SECTOR[planetNum]
+    sector_x, sector_y = data.sectorPostion(sectorName)
+    if planetNum < 1000:
+        h = 2 * data.r
+        w = 2 * data.a
+    else:
+        h = w = 130
     if sector_x + tolerance < up_left[0]:  # 星区位于视野左侧
         newSunPos_x = sunPos[0] + up_left[0] - sector_x - tolerance
-    elif sector_x + 2 * data.a - tolerance > down_right[0]:  # 星区位于视野右侧
-        newSunPos_x = sunPos[0] + down_right[0] - sector_x - 2 * data.a + tolerance
+    elif sector_x + w - tolerance > down_right[0]:  # 星区位于视野右侧
+        newSunPos_x = sunPos[0] + down_right[0] - sector_x - w + tolerance
     else:
         newSunPos_x = sunPos[0]
 
     if sector_y + tolerance < up_left[1]:  # 星区位于视野上侧
         newSunPos_y = sunPos[1] + up_left[1] - sector_y - tolerance
-    elif sector_y + 2 * data.r - tolerance > down_right[1]:  # 星区位于视野下侧
-        newSunPos_y = sunPos[1] + down_right[1] - sector_y - 2 * data.r + tolerance
+    elif sector_y + h - tolerance > down_right[1]:  # 星区位于视野下侧
+        newSunPos_y = sunPos[1] + down_right[1] - sector_y - h + tolerance
     else:
         newSunPos_y = sunPos[1]
 
@@ -77,12 +81,12 @@ def findPlanet(planetNum, tolerance=0):
 
     x1 = max(0, sector_x - up_left[0])
     x1 = int(x1)
-    x2 = min(x1 + 2 * data.a + min(sector_x - up_left[0], 0), 1400)
+    x2 = min(x1 + w + min(sector_x - up_left[0], 0), 1400)
     x2 = int(x2)
 
     y1 = max(0, sector_y - up_left[1])
     y1 = int(y1)
-    y2 = min(y1 + 2 * data.r + min(sector_y - up_left[1], 0), 885)
+    y2 = min(y1 + h + min(sector_y - up_left[1], 0), 885)
     y2 = int(y2)
 
     img = screen[y1:y2, x1:x2]  # 选取指定星区
@@ -175,3 +179,13 @@ def findMoon(planetNum):
             return truePos
 
 
+# 调试用
+if __name__ == '__main__':
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # 设置窗口大小/位置
+    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    time.sleep(0.3)
+
+    findPlanet(1001)

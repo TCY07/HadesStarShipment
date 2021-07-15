@@ -118,6 +118,11 @@ def getShipmentWindow():
 
     contours, _ = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     conts = contoursFilter(contours, 0.535, 170000)  # 过滤得到货物窗口的轮廓
+
+    if conts is None:
+        print("错误，视野中没有发现货物窗口")
+        exit(1)
+
     # window.imshow(gray)
     (x, y, w, h) = cv2.boundingRect(conts[0])
     shipmentWindow = gray[y:y + h, x:x + w]  # 截取货物窗口图像
@@ -128,6 +133,8 @@ def getShipmentWindow():
 
 # 将货物窗口拆分成上下两部分，返回需要的部分的货物信息列表
 def devideInfo(img, conts, part):
+    if conts is None:  # 没有货物
+        return []
     res = []
     for ct in conts:
         (x, y, w, h) = cv2.boundingRect(ct)
@@ -170,8 +177,9 @@ def shipmentPosition():
     # 再次过滤
     conts = contoursFilter(conts, 5.6, 10000)
 
-    # 将轮廓按从上到下排序
-    conts = sortContours(conts)
+    if conts is not None:
+        # 将轮廓按从上到下排序
+        conts = sortContours(conts)
 
     # 返回货物信息窗口，以及窗口各个货物信息条的轮廓
     return shipmentWindow, conts
@@ -182,7 +190,8 @@ def getPlanetShipment():
     i = 0
     info = []
     while 1:
-        win32api.SetCursorPos((340, 355))
+        _, (x, y, _, _) = getShipmentWindow()  # 获取货物窗口的位置
+        win32api.SetCursorPos((x + 80, y + 120))
         # 获取当前可见的货物信息轮廓
         shipmentWindow, conts = shipmentPosition()
         # 获取当前上侧（星球）货物信息列表
@@ -222,6 +231,7 @@ def getPlanetShipment():
                         result.extend(info[1])
                         return result
                 window.Roll(1, 3, 0)
+                time.sleep(0.2)
                 shipmentWindow, conts = shipmentPosition()
                 back = devideInfo(shipmentWindow, conts, 'UP')  # 退回3个位置，读入货物信息
 
@@ -243,7 +253,7 @@ def getPlanetShipment():
             window.Roll(-1, 4, 0)
         else:
             window.Roll(-1, 5, 0)
-        time.sleep(0.25)
+        time.sleep(0.2)
         i += 1
 
     result = []

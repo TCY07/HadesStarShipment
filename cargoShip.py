@@ -108,17 +108,25 @@ class Ship:
             # 选中自己
             window.KeyDown(str(self.number))
             self.chosen = True
-            print('Choose')
             time.sleep(0.5)
 
-    # 装载星球货物栏最上方的一个货物
-    def load(self):
+    # 装载星球货物栏中的一个货物，最上还是最下由side决定
+    def load(self, side='TOP'):
         # 选中并打开货物窗口
         self.choose()
         window.openWindow(window.WindowName.SHIPMENT)
-
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
-        window.LClick((x + 80, y + 120))  # 点击第一个货物的位置
+
+        if side == 'TOP':
+            win32api.SetCursorPos((x + 80, y + 120))
+            window.Roll(1, 50, 0)  # 将货物条拉至最上方
+            time.sleep(0.1)
+            window.LClick((x + 80, y + 120))  # 点击第一个货物的位置
+        elif side == 'BOTTOM':
+            win32api.SetCursorPos((x + 80, y + 330))
+            window.Roll(-1, 50, 0)  # 将货物条拉至最下方
+            time.sleep(0.1)
+            window.LClick((x + 80, y + 330))  # 点击最后一个货物的位置
 
     # 判断该货船上有无货物，并更新货物信息
     def isLoaded(self):
@@ -146,10 +154,12 @@ class Ship:
         if side == 'TOP':
             win32api.SetCursorPos((x + 80, y + 420))
             window.Roll(1, 50, 0)  # 将货物条拉至最上方
+            time.sleep(0.1)
             window.LClick((x + 80, y + 420))  # 点击第一个货物的位置
         elif side == 'BOTTOM':
             win32api.SetCursorPos((x + 80, y + 480))
             window.Roll(-1, 50, 0)  # 将货物条拉至最下方
+            time.sleep(0.1)
             window.LClick((x + 80, y + 480))  # 点击最后一个货物的位置
 
     # 装载所有货物（一键装货）
@@ -217,7 +227,9 @@ class ACTION(Enum):
     DischargeAll = 2  # 在当前停靠点卸载全部货物
     LoadAll = 3  # 装载当前停靠点的全部货物
     Discharge_TOP = 4  # 从上方开始卸货，卸货数量由第三个参数决定
-    Load = 5  # 装载星球货物，装载数量由第三个参数决定
+    Load_TOP = 5  # 从顶层装载星球货物，装载数量由第三个参数决定
+    Load_BOTTOM = 6  # 从底层装载星球货物，装载数量由第三个参数决定
+    Carrying = 7  # 在贸易站提供货物存放功能
 
 
 # 货船执行的任务
@@ -236,6 +248,13 @@ class Mission:
 
         # 安排任务具体内容
         self.actions = way_act  # 需要经过的地点：经过或到达每个地点后需要完成的动作（装载、卸载、取消航线等）
+
+    # 删除本任务
+    def delete(self):
+        Mission.missions.remove(self)
+        self.master.hasMission = False
+        print("任务完成")
+        del self
 
     # 检查当前移动任务的完成进度若任务已完成则返回True
     def checkMovingStatus(self):
@@ -286,8 +305,52 @@ class Mission:
 
     # 执行当前任务,传入当前时间判断是否需要进行移动状态检查
     def act(self, time_):
+        # 任务列表已经全部完成
+        if self.actions[self.process][0] == 0:  # 以action == [0, 0]表示任务结束
+            self.delete()
+            return
+
+        # 任务是--在贸易站提供货物容量
+        if self.actions[self.process][1] == ACTION.Carrying:
+            self.master.choose()
+            window.openWindow(window.WindowName.SHIPMENT)
+            self.master.loadAll()  # 装载星球上的全部货物
+
+            shipmentWindow, conts = shipmentInfo.shipmentPosition()
+            res = shipmentInfo.devideInfo(shipmentWindow, conts, 'UP')
+            if len(res) > 0:  # 星球上有剩余货物，表明自身已经满载
+                self.process += 1
+                window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
+            else:  # 任务还未完成
+                window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
+                return
+
+        # 任务是--从底层装载货物，数量由第三个参数决定
+        elif self.actions[self.process][1] == ACTION.Load_BOTTOM:
+            if self.actions[self.process][0] == main.centerPlanet:  # 是要取走集货星球的曲道外货物
+                if not main.took[main.centerPlanet]:  # 集货星球的曲道外货物还未被取走
+                    main.took[main.centerPlanet] = True  # 记录自己取走了货物
+
+                    # 获取集货星球的货物信息
+                    shipments = main.getShipmentInfo(main.centerPlanet)
+                    outer = 0  # 曲道外货物计数
+                    for i in range(len(shipments) - 1, 0, -1):  # 倒序循环
+                        if not main.isInner(shipments[i]):
+                            outer += 1
+                        else:
+                            break
+
+                    # 按指定数量取货
+                    for i in range(outer):
+                        self.master.load('BOTTOM')
+                    # 插入新任务：将取到的货物移送至贸易站1003
+                    self.actions.insert(self.process + 1, [1003, ACTION.Arriving, 25])
+                    self.actions.insert(self.process + 2, [1003, ACTION.Carrying])
+
+                self.process += 1
+
         # 任务是--装载所有货物
-        if self.actions[self.process][1] == ACTION.LoadAll:
+        elif self.actions[self.process][1] == ACTION.LoadAll:
             # 检查任务是否完成，完成则进入下一个任务阶段
             if self.checkCargoStatus():
                 return
@@ -298,11 +361,23 @@ class Mission:
             # 再次检查任务是否完成
             self.checkCargoStatus()
 
+        # 任务是--卸载所有货物
+        elif self.actions[self.process][1] == ACTION.DischargeAll:
+            if self.actions[self.process][0] == main.centerPlanet:  # 是在集货星球卸货
+                if main.discharge(self):  # 轮到自己卸货
+                    self.master.dischargeAll()  # 一键卸货
+                    # 判断是否卸掉了全部货物
+                    if self.checkCargoStatus():  # 已全部卸载
+                        main.pendingList.remove(self)  # 将自己从等待列表中删去
+
         # 任务是--到达某处
         elif self.actions[self.process][1] == ACTION.Arriving:
             if time_ < self.checkTime and self.checkTime > 0:  # 还未到检查时间
                 return
-            print("检查是否到达目的地")
+            if self.checkTime > 0:
+                print("检查是否到达目的地")
+            else:
+                print("启航去", self.actions[self.process][0])
             statement, destination = self.master.where()
             if statement == State.STOP:  # 现在处于停靠状态
                 # 尚未出发
@@ -316,20 +391,27 @@ class Mission:
                     time.sleep(2)
 
                     # 设置下次检查时间
-                    self.checkTime = time.time() + 40
+                    self.checkTime = time.time() + self.actions[self.process][2]
                 # 已经移动到目标点
                 else:
                     self.checkMovingStatus()
             elif statement == State.MOVING:  # 现在处于移动状态
-                self.checkTime = time.time() + 10
-        # 任务是--卸下顶层的曲道外和集货星球货物
+                self.checkTime = time.time() + 5
+
+        # 任务是--卸下顶层的货物，货物数量由第三个参数决定
         elif self.actions[self.process][1] == ACTION.Discharge_TOP:
             for i in range(0, self.actions[self.process][2]):  # 按照要求卸载相应个数的货物
-                self.master.discharge('TOP')
+                if main.shipmentCount[self.actions[self.process][0]] < 36:  # 卸货贸易站还未满载
+                    main.shipmentCount[self.actions[self.process][0]] += 1  # 其载货增加1
+                    self.master.discharge('TOP')
+                else:
+                    print(self.actions[self.process][0], "已满载，警告！")
+                    break  # 停止卸货，剩下货物直接带去集货星球（待优化）
             # 任务已完成，进行到下一个任务
             self.process += 1
+
         # 任务是--从星球或贸易站装载部分顶层货物
-        elif self.actions[self.process][1] == ACTION.Load:
+        elif self.actions[self.process][1] == ACTION.Load_TOP:
             # 任务是取走贸易站的曲道内货物
             if self.actions[self.process][0] > 1000:
                 if main.took[self.actions[self.process][0]]:  # 但贸易站的曲道内货物已经被取走
@@ -338,35 +420,35 @@ class Mission:
                 else:
                     main.took[self.actions[self.process][0]] = True  # 记录自己取走了贸易站的曲道内货物
 
-            for i in range(0, self.actions[self.process][2]):  # 按照要求卸载相应个数的货物
+            for i in range(0, self.actions[self.process][2]):  # 按照要求装载相应个数的货物
+                main.shipmentCount[self.actions[self.process][0]] -= 1
                 self.master.load()
             # 任务已完成，进行到下一个任务
             self.process += 1
             window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
-            exit(0)
 
 
 
 
+# 调试用
+if __name__ == '__main__':
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # 设置窗口大小/位置
+    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    time.sleep(0.3)
 
+    _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
+    win32api.SetCursorPos((x + 80, y + 330))
 
-
-
-# 本段主要方便调试，最后可删除
-# handle = win32gui.FindWindow(None, 'Hades\' Star')
-# win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
-# win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
-# # 设置窗口大小/位置
-# win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
-# time.sleep(0.3)
-
-# 本段可用于截图保存信息窗口的名字图像模板
-# img, _ = window.ScreenShot()
-# gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
-# infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
-# h = infoWindow[35:48, 50:90]
-# _, h = cv2.threshold(h, 120, 255, cv2.THRESH_BINARY)
-# cv2.imwrite('Pictures/info16.PNG', h)
-# window.imshow(h)
+    # # 本段可用于截图保存信息窗口的名字图像模板
+    # img, _ = window.ScreenShot()
+    # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
+    # infoWindow = gray[710:, 525:875]  # 截取信息窗口图像
+    # h = infoWindow[35:48, 50:90]
+    # _, h = cv2.threshold(h, 120, 255, cv2.THRESH_BINARY)
+    # cv2.imwrite('Pictures/info16.PNG', h)
+    # window.imshow(h)
 
 

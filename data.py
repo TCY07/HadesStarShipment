@@ -206,13 +206,13 @@ def sectorPostion(name):
         pos_x = int(1.5 * a * x - a)
         pos_y = int(2 * r * (y - 4 + 0.5 * abs(x)) - r)
     elif name == 'A2B2':  # 1号贸易站的星区
-        pos_x = int(-4.5 * a)
-        pos_y = int(-2 * r)
+        pos_x = int(-4.5 * a + 50)
+        pos_y = int(-2 * r + 10)
     elif name == 'D2E1E2':  # 2号贸易站的星区
-        pos_x = 0
-        pos_y = int(-5 * r)
+        pos_x = 80
+        pos_y = int(-5 * r + 50)
     elif name == 'E1E2F1':  # 3号贸易站的星区
-        pos_x = int(1.5 * a)
+        pos_x = int(1.5 * a + 50)
         pos_y = int(-5.2 * r)
 
     return pos_x, pos_y

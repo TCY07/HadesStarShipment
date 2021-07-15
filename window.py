@@ -138,16 +138,15 @@ def sunPosition(handle=None):
     # 计算黄星中心相对于图片中心坐标
     contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:  # 视野中没有找到黄星
-        print("视野中没有找到黄星，通过其他星球计算")
         # 通过视野中的其他星球定位
         for num in range(1, 17):
             loc = Find.match(num, screen, 0.9)
             if loc is not None:  # 该星球出现在视野中
                 # 从该星球坐标推算黄星坐标
-                print('以星球%d为基准' % num)
+                # print('以星球%d为基准' % num)
                 location = (int(loc[0] - locationInfo[num][0] - 700),
                             int(loc[1] - locationInfo[num][1] - 442))
-                print(location)
+                # print(location)
                 return location
         print("视野定位失败")
         exit(1)
@@ -194,9 +193,10 @@ def Relocate(pos, tolerance=50):
 
 # 获取星球坐标信息并保存到本地
 def savePlanetLocation():
+    KeyDown('esc')
     info = {}
     for num in range(1, 17):
-        _, loc = Find.findPlanet(num)  # 获取星球的星区坐标
+        _, loc = Find.findPlanet(num, 0)  # 获取星球的星区坐标
         info[num] = loc
     fileObject = open('locationInfo.txt', 'w')
     fileObject.write(str(info))
