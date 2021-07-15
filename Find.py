@@ -188,4 +188,6 @@ if __name__ == '__main__':
     win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
     time.sleep(0.3)
 
-    findPlanet(1001)
+    pos, _ = findPlanet(16)
+    pos = (pos[0] - 15, pos[1] + 55)
+    win32api.SetCursorPos(pos)

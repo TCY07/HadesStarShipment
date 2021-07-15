@@ -9,17 +9,18 @@ import window
 import Find
 import shipmentInfo
 import cargoShip
+from enum import Enum
 
 
 # 各类参数
 shipCount = 8  # 货船数量
 outerClear = False  # 初始状态时，曲道外星球是否已人工清空
-
-
 # 曲道外星球列表
 outerPlanet = [4, 5, 7, 8, 10]
 # 集货星球
 centerPlanet = 16
+
+
 # 判断两贸易站的曲道内货物，以及集货星球的曲道外货物是否已经被取走
 took = {1002: False, 1003: False, centerPlanet: False}
 # 等待卸货的任务列表
@@ -119,6 +120,7 @@ def gatherOuter():
                 mission = cargoShip.Mission(ship, m)
                 # 启航
                 mission.act(time.time())
+                mission.act(time.time())
                 break  # 进行下一个曲道外星球
 
 
@@ -134,6 +136,36 @@ def discharge(mission):
         return False
 
 
+# 第一轮计算机加成的三种主要路线
+route = [
+    [2003, 11, 12, 9, 6, 1, 2, 101, 102, 201],  # 左
+    [2003, 13, 14, 15, 3, 2, 201, 301],  # 右
+    [2003, 6, 1, 2, 3, 101, 102, 201, 301]  # 中
+]
+
+
+# 第一轮计算机加成，加成集货星球的货物_第一步：主要航线取货
+def buffCenterShipment_1():
+    c = 0
+    for ship in cargoShip.Ship.ships:
+        if ship.hasMission:
+            continue
+        # 是空闲货船
+        # 创建任务
+        if c < len(route):
+            m = [
+                [centerPlanet, cargoShip.ACTION.Passing, route[c]],  # 经过集货星球进行计算机加成
+                [2003, cargoShip.ACTION.Carrying],  # 取消航线
+                []  # 返回集货星球
+            ]
+            # 排入任务列表
+            mission = cargoShip.Mission(ship, m)
+            # 启航
+            mission.act(time.time())
+        else:  # 主要航线已经设置完毕
+            break
+
+
 if __name__ == '__main__':
     # 初始化游戏窗口
     handle = window.Init('Hades\' Star')
@@ -141,7 +173,7 @@ if __name__ == '__main__':
     window.getPlanetLocation()
 
     # 初始化货船信息
-    for num in range(shipCount):
+    for num in range(1):
         cargoShip.Ship(num)
 
     # 取消所有货船的选中状态5
@@ -149,26 +181,40 @@ if __name__ == '__main__':
     for item in cargoShip.Ship.ships.values():
         item.chosen = False
 
-    if outerClear is False:  # 初始时曲道外星球上有货物
-        # 创建任务列表：集中曲道外星球上的货物
-        gatherOuter()  # （注意：现要求曲道外各星球均有货船停靠）
-
-    # 遍历任务列表并执行--当前任务：收集曲道外星球上的货物，货船最终停靠在集货星球
-    while len(cargoShip.Mission.missions) > 0 and len(pendingList) < 2:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
-        for m in cargoShip.Mission.missions:
-            m.act(time.time())
-
-    # 创建测试任务
+    # 测试
     m = [
+        [16, cargoShip.ACTION.Passing, 15, [1, 2]],
         [0, 0]
     ]
-    # 排入任务列表
-    cargoShip.Ship(5)
-    cargoShip.Mission(cargoShip.Ship.ships[5], m)
-
-    while len(cargoShip.Mission.missions) > 0:
+    cargoShip.Mission(cargoShip.Ship.ships[0], m)
+    while True:
         for m in cargoShip.Mission.missions:
             m.act(time.time())
+
+    if outerClear is False:  # 初始时曲道外星球上有货物
+        # 第一轮集货
+        gatherOuter()  # （注意：现要求曲道外各星球均有货船停靠）
+
+    # 遍历任务列表并执行--当前任务：收集曲道外星球上的货物
+    while len(cargoShip.Mission.missions) > 0 and len(pendingList) == 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
+        for m in cargoShip.Mission.missions:
+            m.act(time.time())
+    exit(0)
+
+    # 主要航线设置
+    buffCenterShipment_1()
+
+    # # 创建测试任务
+    # m = [
+    #     [0, 0]
+    # ]
+    # # 排入任务列表
+    # cargoShip.Ship(5)
+    # cargoShip.Mission(cargoShip.Ship.ships[5], m)
+    #
+    # while len(cargoShip.Mission.missions) > 0:
+    #     for m in cargoShip.Mission.missions:
+    #         m.act(time.time())
 
 
 

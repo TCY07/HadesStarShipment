@@ -223,13 +223,20 @@ class Ship:
 
 class ACTION(Enum):
     Arriving = 0  # 前往并停靠在某处
-    Passing = 1  # 经过且不停靠某处
+    Passing = 1  # 经过且不停靠某处，第三个参数决定检查时间，第四个参数决定后续路径
     DischargeAll = 2  # 在当前停靠点卸载全部货物
     LoadAll = 3  # 装载当前停靠点的全部货物
     Discharge_TOP = 4  # 从上方开始卸货，卸货数量由第三个参数决定
     Load_TOP = 5  # 从顶层装载星球货物，装载数量由第三个参数决定
     Load_BOTTOM = 6  # 从底层装载星球货物，装载数量由第三个参数决定
     Carrying = 7  # 在贸易站提供货物存放功能
+    Cancel = 8  # 取消航线
+
+
+# 判断两个地点是否”有可能“相同
+def almost(des1, des2):
+    if 1000 < des1 < 2000 and 1000 < des2 < 2000:
+        return True
 
 
 # 货船执行的任务
@@ -262,20 +269,24 @@ class Mission:
 
         # 执行的任务是--到达某处
         if self.actions[self.process][1] == ACTION.Arriving:
-            if statement == State.STOP:  # 已到达目的地
+            if statement == State.STOP and almost(destination, self.actions[self.process][0]):  # 已到达目的地
                 self.process += 1  # 进行到下一步
                 self.checkTime = -1
                 return True
             else:
                 return False
+
         # 执行的任务是--经过（不停靠）某处
         elif self.actions[self.process][1] == ACTION.Passing:
-            if destination != self.actions[self.process][0] and statement == State.MOVING:  # 处于移动中，已经过该处
-                self.process += 1  # 进行到下一步
-                self.checkTime = -1
-                return True
-            else:
+            if statement == State.STOP:  # 还未启航
                 return False
+            else:  # 现在处于移动中
+                if almost(destination, self.actions[self.process][0]):  # 现在正朝着经过点移动
+                    return False
+                else:  # 朝着经过点以外的其他点移动，视为已经经过
+                    self.process += 1
+                    self.checkTime = -1
+                    return True
 
     # 检查货物装/卸载任务的完成情况。若任务已完成则返回True
     def checkCargoStatus(self):
@@ -310,8 +321,48 @@ class Mission:
             self.delete()
             return
 
+        # 任务是--经过某处并设置后续航线，后续航线由第三个参数决定
+        if self.actions[self.process][1] == ACTION.Passing:
+            statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
+            if statement == State.STOP and destination == self.actions[self.process][0]:  # 现在停靠在应该经过的地方
+                # 在经过目标点（集货星球）前先经过3号曲道枢纽
+                self.actions.insert(self.process, [2003, ACTION.Passing, 15, [main.centerPlanet]])
+                return
+
+            if time_ < self.checkTime and self.checkTime > 0:  # 已设置检查时间，但还未到检查时间（已启航）
+                return
+            if self.checkTime > 0:
+                print("检查是否经过目标点")
+            else:  # 还未设置检查时间
+                print("启航")
+
+            # 第一次进入此任务，且不停靠在经过点
+            if self.checkTime < 0:
+                self.master.choose()
+
+                if statement == State.STOP:  # 停在经过点外某处
+                    pos, _ = Find.findPlanet(self.actions[self.process][0])
+                    # 右键双击启航
+                    window.RClick(pos)
+                    time.sleep(0.3)
+                    window.RClick(pos)
+                    time.sleep(2)
+
+                # 当前状态是：朝着经过点移动
+                # 根据第四个参数依次设置后续路径
+                for point in self.actions[self.process][3]:
+                    pos, _ = Find.findPlanet(point)
+                    # 右键单击设置路径
+                    window.RClick(pos)
+                    time.sleep(0.3)
+                # 设置首次检查时间
+                self.checkTime = time.time() + self.actions[self.process][2]
+            # 已经出发（checkTime > 0）
+            elif not self.checkMovingStatus():  # 还未经过目标点
+                self.checkTime = time.time() + 5
+
         # 任务是--在贸易站提供货物容量
-        if self.actions[self.process][1] == ACTION.Carrying:
+        elif self.actions[self.process][1] == ACTION.Carrying:
             self.master.choose()
             window.openWindow(window.WindowName.SHIPMENT)
             self.master.loadAll()  # 装载星球上的全部货物
@@ -372,30 +423,27 @@ class Mission:
 
         # 任务是--到达某处
         elif self.actions[self.process][1] == ACTION.Arriving:
-            if time_ < self.checkTime and self.checkTime > 0:  # 还未到检查时间
+            if time_ < self.checkTime and self.checkTime > 0:  # 已设置检查时间，但还未到检查时间
                 return
             if self.checkTime > 0:
                 print("检查是否到达目的地")
-            else:
+            else:  # 还未设置检查时间
                 print("启航去", self.actions[self.process][0])
-            statement, destination = self.master.where()
-            if statement == State.STOP:  # 现在处于停靠状态
-                # 尚未出发
-                if self.checkTime < 0:
-                    self.master.choose()
-                    pos, _ = Find.findPlanet(self.actions[self.process][0])
-                    # 右键双击
-                    window.RClick(pos)
-                    time.sleep(0.3)
-                    window.RClick(pos)
-                    time.sleep(2)
 
-                    # 设置下次检查时间
-                    self.checkTime = time.time() + self.actions[self.process][2]
-                # 已经移动到目标点
-                else:
-                    self.checkMovingStatus()
-            elif statement == State.MOVING:  # 现在处于移动状态
+            # 尚未出发
+            if self.checkTime < 0:
+                self.master.choose()
+                pos, _ = Find.findPlanet(self.actions[self.process][0])
+                # 右键双击
+                window.RClick(pos)
+                time.sleep(0.3)
+                window.RClick(pos)
+                time.sleep(2)
+
+                # 设置下次检查时间
+                self.checkTime = time.time() + self.actions[self.process][2]
+            # 已经出发
+            elif not self.checkMovingStatus():  # 还未到达目标点
                 self.checkTime = time.time() + 5
 
         # 任务是--卸下顶层的货物，货物数量由第三个参数决定
