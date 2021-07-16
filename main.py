@@ -155,7 +155,7 @@ def buffCenterShipment_1():
         if c < len(route):
             m = [
                 [centerPlanet, cargoShip.ACTION.Passing, route[c]],  # 经过集货星球进行计算机加成
-                [2003, cargoShip.ACTION.Carrying],  # 取消航线
+                [2003, cargoShip.ACTION.Cancel],  # 取消航线
                 []  # 返回集货星球
             ]
             # 排入任务列表
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     window.getPlanetLocation()
 
     # 初始化货船信息
-    for num in range(1):
+    for num in range(6, 7):
         cargoShip.Ship(num)
 
     # 取消所有货船的选中状态5
@@ -183,10 +183,11 @@ if __name__ == '__main__':
 
     # 测试
     m = [
-        [16, cargoShip.ACTION.Passing, 15, [1, 2]],
+        [16, cargoShip.ACTION.Load_TOP, 15],
+        [16, cargoShip.ACTION.Discharge_TOP, 10],
         [0, 0]
     ]
-    cargoShip.Mission(cargoShip.Ship.ships[0], m)
+    cargoShip.Mission(cargoShip.Ship.ships[6], m)
     while True:
         for m in cargoShip.Mission.missions:
             m.act(time.time())

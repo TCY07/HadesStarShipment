@@ -43,7 +43,13 @@ def match(number, background, tolerance):
 
 # 返回指定星球的屏幕坐标
 # 让指定的星区进入视野范围,tolerance容忍星区不完全在视野内
-def findPlanet(planetNum, tolerance=0):
+def findPlanet(planetNum, tolerance=-30):
+    # 特例：要寻找的是曲道枢纽
+    if planetNum > 2000:
+        if planetNum == 2003:  # 3号枢纽
+            center, temp = findPlanet(16)
+            return (center[0] - 15, center[1] + 55), (temp[0] - 15, temp[1] + 55)
+
     sunPos = window.sunPosition()
     # 当前屏幕视野范围（星系坐标）
     up_left = (-700 - sunPos[0], -442 - sunPos[1])
@@ -51,11 +57,12 @@ def findPlanet(planetNum, tolerance=0):
 
     sectorName = data.PLANET_SECTOR[planetNum]
     sector_x, sector_y = data.sectorPostion(sectorName)
-    if planetNum < 1000:
+    if planetNum < 1000:  # 是星球
         h = 2 * data.r
         w = 2 * data.a
-    else:
+    elif planetNum < 2000:  # 是贸易站
         h = w = 130
+
     if sector_x + tolerance < up_left[0]:  # 星区位于视野左侧
         newSunPos_x = sunPos[0] + up_left[0] - sector_x - tolerance
     elif sector_x + w - tolerance > down_right[0]:  # 星区位于视野右侧

@@ -96,7 +96,6 @@ def ScreenShot(handle=None):
 def LClick(pos):
     win32api.SetCursorPos(pos)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, pos[0], pos[1], 0, 0)
-    time.sleep(0.1)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, pos[0], pos[1], 0, 0)
 
 
@@ -104,7 +103,6 @@ def LClick(pos):
 def RClick(pos):
     win32api.SetCursorPos(pos)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, pos[0], pos[1], 0, 0)
-    time.sleep(0.1)
     win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, pos[0], pos[1], 0, 0)
 
 
