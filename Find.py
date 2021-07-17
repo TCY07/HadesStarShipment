@@ -53,7 +53,7 @@ def findPlanet(planetNum, tolerance=-30):
     sunPos = window.sunPosition()
     # 当前屏幕视野范围（星系坐标）
     up_left = (-700 - sunPos[0], -442 - sunPos[1])
-    down_right = (700 - sunPos[0], 442 - sunPos[1])
+    down_right = (700 - sunPos[0], 242 - sunPos[1])  # 考虑下方信息窗口的遮挡
 
     sectorName = data.PLANET_SECTOR[planetNum]
     sector_x, sector_y = data.sectorPostion(sectorName)
@@ -110,7 +110,7 @@ def findPlanet(planetNum, tolerance=-30):
 
 
 # 尝试在结果图中找到两颗卫星的轮廓
-def tryGetMood(result, threshold):
+def tryGetMoon(result, threshold):
     _, bw = cv2.threshold(result, threshold, 255, cv2.THRESH_BINARY)  # 转化为二值图像
     s = np.ones((5, 5))
     bw = cv2.dilate(bw, s)
@@ -132,10 +132,10 @@ def findMoon(planetNum):
     # 截取指定星区图像
     screen, (screen_x, screen_y, _, _) = window.ScreenShot()
     # 当前屏幕视野范围（星系坐标）
-    x1 = planetPos[0] - screen_x - 117
-    y1 = planetPos[1] - screen_y - 117
+    x1 = planetPos[0] - screen_x - 137
+    y1 = planetPos[1] - screen_y - 137
 
-    img = screen[y1:y1 + 234, x1:x1 + 234]  # 选取指定星区
+    img = screen[y1:y1 + 274, x1:x1 + 274]  # 选取指定星区
 
     # 初始行星有2个很像的卫星，之后单独处理
     if int(planetNum / 100) != 1:
@@ -152,10 +152,10 @@ def findMoon(planetNum):
         result = cv2.matchTemplate(img, target, cv2.TM_CCORR_NORMED)
 
         threshold = 0.7
-        contours = tryGetMood(result, threshold)
+        contours = tryGetMoon(result, threshold)
         while len(contours) < 2:
             threshold -= 0.01
-            contours = tryGetMood(result, threshold)
+            contours = tryGetMoon(result, threshold)
             if len(contours) > 2:
                 print("定位卫星失败")
                 window.imshow(result)

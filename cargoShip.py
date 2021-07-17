@@ -124,19 +124,13 @@ class Ship:
             for i in range(n):
                 window.LClick((x + 80, y + 120))  # 点击第一个货物的位置
                 time.sleep(0.15)
-
-            time.sleep(0.2)
-            window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
         elif side == 'BOTTOM':
             win32api.SetCursorPos((x + 80, y + 330))
-            window.Roll(-1, 50, 0)  # 将货物条拉至最下方
+            window.Roll(-1, 120, 0)  # 将货物条拉至最下方
             time.sleep(0.3)
             for i in range(n):
                 window.LClick((x + 80, y + 330))  # 点击最后一个货物的位置
                 time.sleep(0.15)
-
-            time.sleep(0.2)
-            window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
 
     # 判断该货船上有无货物，并更新货物信息
     def isLoaded(self):
@@ -152,8 +146,6 @@ class Ship:
                 self.loaded = True
                 return True
         else:  # 停靠在非货点
-            time.sleep(0.2)
-            window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
             return None
 
     # 卸载货船货物栏的一个货物,输入参数决定是卸载最上方还是最下方
@@ -170,9 +162,6 @@ class Ship:
             for i in range(n):
                 window.LClick((x + 80, y + 420))  # 点击第一个货物的位置
                 time.sleep(0.15)
-
-            time.sleep(0.2)
-            window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
         elif side == 'BOTTOM':
             win32api.SetCursorPos((x + 80, y + 480))
             window.Roll(-1, 50, 0)  # 将货物条拉至最下方
@@ -180,8 +169,6 @@ class Ship:
             for i in range(n):
                 window.LClick((x + 80, y + 480))  # 点击最后一个货物的位置
                 time.sleep(0.15)
-            time.sleep(0.2)
-            window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
 
     # 装载所有货物（一键装货）
     def loadAll(self):
@@ -191,10 +178,9 @@ class Ship:
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口的位置
         window.LClick((x + 195, y + 380))  # 点击一键装货
-        time.sleep(1.5)
+        time.sleep(0.1)
         win32api.SetCursorPos((x + 120, y + 380))  # 鼠标移开，避免影响轮廓检测
-        time.sleep(0.2)
-        window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
+        time.sleep(1.5)
 
     # 卸掉所有货物（一键卸货）
     def dischargeAll(self):
@@ -204,10 +190,9 @@ class Ship:
 
         _, (x, y, _, _) = shipmentInfo.getShipmentWindow()  # 获取货物窗口图像
         window.LClick((x + 250, y + 380))  # 点击一键卸货
-        time.sleep(1.5)
+        time.sleep(0.1)
         win32api.SetCursorPos((x + 120, y + 380))  # 鼠标移开，避免影响轮廓检测
-        time.sleep(0.2)
-        window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
+        time.sleep(1.5)
 
     # 更新并返回本货船的移动状态，以及目的地/停靠点信息
     def where(self):
@@ -234,7 +219,7 @@ class Ship:
         _, score2, _, _ = cv2.minMaxLoc(cv2.matchTemplate(destination, warplane, cv2.TM_CCORR_NORMED))  # 曲道枢纽
         # print(num, score1)
         # print("曲道", score2)
-        if max(score1, score2) < 0.9:  # 目的地是贸易站或曲道内星球
+        if max(score1, score2) < 0.7:  # 目的地是贸易站或曲道内星球
             self.destination = 1000
         elif score1 > score2:  # 目的地是曲道外星球或集货星球
             self.destination = num
@@ -263,6 +248,8 @@ def almost(des1, des2):
         return True
     if 999 < des1 < 2000 and 999 < des2 < 2000:
         return True
+    if (des1 == 0 or des2 == 0) and (des1 > 2000 or des2 > 2000):  # 是曲道枢纽
+        return True
 
 
 # 货船执行的任务
@@ -286,35 +273,8 @@ class Mission:
     def delete(self):
         Mission.missions.remove(self)
         self.master.hasMission = False
-        print("任务完成")
+        print(self.master.number, "任务完成")
         del self
-
-    # 检查当前移动任务的完成进度若任务已完成则返回True
-    def checkMovingStatus(self):
-        statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
-
-        # 执行的任务是--到达某处
-        if self.actions[self.process][1] == ACTION.Arriving:
-            if statement == State.STOP and almost(destination, self.actions[self.process][0]):  # 已到达目的地
-                self.checkTime = -1
-                self.process += 1  # 进行到下一步
-                self.act(time.time())
-                return True
-            else:
-                return False
-
-        # 执行的任务是--经过（不停靠）某处
-        elif self.actions[self.process][1] == ACTION.Passing:
-            if statement == State.STOP:  # 还未启航
-                return False
-            else:  # 现在处于移动中
-                if almost(destination, self.actions[self.process][0]):  # 现在正朝着经过点移动
-                    return False
-                else:  # 朝着经过点以外的其他点移动，视为已经经过
-                    self.checkTime = -1
-                    self.process += 1  # 进行到下一步
-                    self.act(time.time())
-                    return True
 
     # 检查货物装/卸载任务的完成情况。若任务已完成则返回True
     def checkCargoStatus(self):
@@ -334,35 +294,49 @@ class Mission:
             shipmentWindow, conts = shipmentInfo.shipmentPosition()
             res = shipmentInfo.devideInfo(shipmentWindow, conts, 'UP')
             if len(res) == 0:  # 已经全部装载
-                window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
                 self.process += 1  # 进行到下一步
                 self.act(time.time())
                 return True
             else:
-                window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
                 return False
 
     # 执行当前任务,传入当前时间判断是否需要进行移动状态检查
     def act(self, time_):
         # 任务列表已经全部完成
         if self.actions[self.process][0] == 0:  # 以action == [0, 0]表示任务结束
+            window.closeWindow(window.WindowName.SHIPMENT)
             self.delete()
             return
 
-        # 任务是--经过某处并设置后续航线，后续航线由第三个参数决定
-        if self.actions[self.process][1] == ACTION.Passing:
+        # 任务是--取消后续所有航线
+        if self.actions[self.process][1] == ACTION.Cancel:
+            self.master.choose()
+            for _ in range(20):
+                window.KeyDown('e', 0)
+            self.process += 1
+            time.sleep(1.5)
+            self.act(time.time())
+
+        # 任务是--经过某处并设置后续航线，后续航线由第四个参数决定
+        elif self.actions[self.process][1] == ACTION.Passing:
             statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
-            if statement == State.STOP and destination == self.actions[self.process][0]:  # 现在停靠在应该经过的地方
+            if statement == State.STOP and almost(destination, self.actions[self.process][0]):  # 现在停靠在应该经过的地方
                 # 在经过目标点（集货星球）前先经过3号曲道枢纽
-                self.actions.insert(self.process, [2003, ACTION.Passing, 10, [main.centerPlanet]])
+                route = [main.centerPlanet]
+                route.extend(self.actions[self.process][3])
+                self.actions[self.process][3] = []
+                self.actions.insert(self.process, [2003, ACTION.Passing, 0, route])
+
+                self.act(time.time())
                 return
 
             if time_ < self.checkTime and self.checkTime > 0:  # 已设置检查时间，但还未到检查时间（已启航）
                 return
+
             if self.checkTime > 0:
-                print("检查是否经过目标点")
+                print("检查" + str(self.master.number) + "是否经过目标点")
             else:  # 还未设置检查时间
-                print("启航")
+                print(str(self.master.number) + "启航去" + str(self.actions[self.process][0]))
 
             # 第一次进入此任务，且不停靠在经过点
             if self.checkTime < 0:
@@ -372,20 +346,41 @@ class Mission:
                     pos, _ = Find.findPlanet(self.actions[self.process][0])
                     # 右键双击启航
                     window.RClick(pos)
-                    time.sleep(0.3)
+                    time.sleep(0.1)
                     window.RClick(pos)
+                    time.sleep(1.5)  # 完成启航前如果点击当前星球会打开货物信息窗口，而不会设置航线
+                    window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
 
                 # 当前状态是：朝着经过点移动
                 # 根据第四个参数依次设置后续路径
                 for point in self.actions[self.process][3]:
-                    pos, _ = Find.findPlanet(point, -200)
-                    # 右键单击设置路径
-                    window.RClick(pos)
+                    if point < 100 or point > 2000:  # 是星球（不是卫星），或者曲道枢纽
+                        pos, _ = Find.findPlanet(point, -30)
+                        # 右键单击设置路径
+                        window.RClick(pos)
+                    elif point < 1000:  # 是卫星
+                        pos = Find.findMoon(point)
+                        # 右键单击设置路径
+                        window.RClick(pos)
+                        # 还原屏幕缩放
+                        window.Roll(-1, 9)
+                        main.zoomTimes += 1
+                        if main.zoomTimes >= 5:  # 多次缩放后会使缩放尺寸变化，需要初始化一下
+                            window.Init('Hades\' Star')
+                            main.zoomTimes = 0
+
                 # 设置首次检查时间
                 self.checkTime = time.time() + self.actions[self.process][2]
+                #  因为上面的操作耗费了很多时间，所以直接先检查一次
+                self.act(time.time())
             # 已经出发（checkTime > 0）
-            elif not self.checkMovingStatus():  # 还未经过目标点
-                self.checkTime = time.time() + 2
+            else:
+                if almost(destination, self.actions[self.process][0]):  # 现在正朝着经过点移动
+                    self.checkTime = time.time() + 1
+                else:  # 朝着经过点以外的其他点移动，视为已经经过
+                    self.checkTime = -1
+                    self.process += 1  # 进行到下一步
+                    self.act(time.time())
 
         # 任务是--在贸易站提供货物容量
         elif self.actions[self.process][1] == ACTION.Carrying:
@@ -394,12 +389,11 @@ class Mission:
             window.openWindow(window.WindowName.SHIPMENT)
             shipmentWindow, conts = shipmentInfo.shipmentPosition()
             res = shipmentInfo.devideInfo(shipmentWindow, conts, 'UP')
-            if len(res) > 0:  # 星球上有剩余货物，表明自身已经满载
+            if len(res) > 0 or len(Ship.ships) < 4:  # 星球上有剩余货物，表明自身已经满载（货船数量小于4表示是测试模式）
+                print(self.master.number, "进入待机状态，在贸易站提供货物容量")
                 window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
-                self.process += 1  # 进行到下一步
-                self.act(time.time())
+                Mission.missions.remove(self)  # 将自己从任务列表中删除，但不解除货船的任务状态
             else:  # 任务还未完成
-                window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
                 return
 
         # 任务是--从底层装载货物，数量由第三个参数决定
@@ -428,14 +422,10 @@ class Mission:
 
         # 任务是--装载所有货物
         elif self.actions[self.process][1] == ACTION.LoadAll:
-            # 检查任务是否完成，完成则进入下一个任务阶段
-            if self.checkCargoStatus():
-                return
-            # 任务还未完成
             # if self.master.isLoaded():  # 有载货则全卸掉
             #     self.master.dischargeAll()
             self.master.loadAll()  # 装载星球上的全部货物
-            # 再次检查任务是否完成
+            # 检查任务是否完成
             self.checkCargoStatus()
 
         # 任务是--卸载所有货物
@@ -452,21 +442,34 @@ class Mission:
             if time_ < self.checkTime and self.checkTime > 0:  # 已设置检查时间，但还未到检查时间
                 return
             if self.checkTime > 0:
-                print("检查是否到达目的地")
+                print("检查" + str(self.master.number) + "是否到达目的地")
                 # 已经出发
-                if not self.checkMovingStatus():  # 还未到达目标点
+                statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
+                if statement == State.STOP and almost(destination, self.actions[self.process][0]):  # 已到达目的地
+                    self.checkTime = -1
+                    self.process += 1  # 进行到下一步
+                    self.act(time.time())
+                else:
                     self.checkTime = time.time() + 5
+
             else:  # 还未设置检查时间
-                print("启航去", self.actions[self.process][0])
-                # 尚未出发
-                self.master.choose()
-                pos, _ = Find.findPlanet(self.actions[self.process][0])
-                # 右键双击
-                window.RClick(pos)
-                time.sleep(0.3)
-                window.RClick(pos)
-                # 设置首次检查时间
-                self.checkTime = time.time() + self.actions[self.process][2]
+                statement, destination = self.master.where()  # 获取货船的当前运动状态和位置
+                if statement == State.STOP:  # 停靠在某处,尚未出发
+                    print(str(self.master.number) + "启航去" + str(self.actions[self.process][0]))
+                    self.master.choose()
+                    window.closeWindow(window.WindowName.SHIPMENT)  # 关闭货物窗口
+
+                    pos, _ = Find.findPlanet(self.actions[self.process][0])
+                    # 右键双击
+                    window.RClick(pos)
+                    time.sleep(0.1)
+                    window.RClick(pos)
+                    # 设置首次检查时间
+                    self.checkTime = time.time() + self.actions[self.process][2]
+                else:  # 处于移动中
+                    print(str(self.master.number) + "准备停靠" + str(self.actions[self.process][0]))
+                    # 设置首次检查时间
+                    self.checkTime = time.time() + self.actions[self.process][2]
 
         # 任务是--卸下顶层的货物，货物数量由第三个参数决定
         elif self.actions[self.process][1] == ACTION.Discharge_TOP:

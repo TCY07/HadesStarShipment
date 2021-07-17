@@ -9,6 +9,7 @@ import cv2
 import Find
 import data
 from enum import Enum
+import cargoShip
 
 
 class WindowName(Enum):
@@ -24,10 +25,10 @@ locationInfo = {}  # 星球坐标信息
 def openWindow(name):
     if name in openedWindow:  # 已经是打开状态，无需操作
         return
-    else:
-        if name == WindowName.SHIPMENT:  # 打开货物窗口
-            openedWindow.append(name)
-            KeyDown('r')
+
+    if name == WindowName.SHIPMENT:  # 打开货物窗口
+        openedWindow.append(name)
+        KeyDown('r')
 
     time.sleep(0.5)
 
@@ -36,10 +37,10 @@ def openWindow(name):
 def closeWindow(name):
     if name not in openedWindow:  # 已经是关闭状态，无需操作
         return
-    else:
-        if name == WindowName.SHIPMENT:  # 关闭货物窗口
-            openedWindow.remove(name)
-            KeyDown('r')
+
+    if name == WindowName.SHIPMENT:  # 关闭货物窗口
+        openedWindow.remove(name)
+        KeyDown('r')
 
     time.sleep(0.5)
 
@@ -74,6 +75,10 @@ def Init(name):
     pos = (int((x1+x2)/2), int((y1+y2+35)/2))
     win32api.SetCursorPos(pos)
     Roll(-1, 13, 0.1)  # 滚轮调整视野缩放
+
+    # 货船选中信息更改
+    for item in cargoShip.Ship.ships.values():
+        item.chosen = False
 
     return handle
 

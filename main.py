@@ -27,6 +27,8 @@ took = {1002: False, 1003: False, centerPlanet: False}
 pendingList = []
 # 贸易站存放货物数量，用于判断是否溢出
 shipmentCount = {1002: 0, 1003: 0}
+# 屏幕缩放次数计数
+zoomTimes = 0
 
 
 # 读取某星球当前货物信息列表
@@ -41,7 +43,6 @@ def getShipmentInfo(name):
     window.openWindow(window.WindowName.SHIPMENT)
     shipments = shipmentInfo.getPlanetShipment()  # 得到货物信息列表
     window.closeWindow(window.WindowName.SHIPMENT)
-    # print(name, shipments)  # 打印货物信息
     return shipments
 
 
@@ -84,7 +85,7 @@ def gatherOuter():
         outer = 0  # 曲道外货物计数
         for i in range(len(shipments) - 1, 0, -1):  # 倒序循环
             if shipments[i] == 1002:
-                center2 += 1
+                center2 += 14
                 outer += 1
             elif shipments[i] == 1003:
                 center3 += 1
@@ -118,8 +119,8 @@ def gatherOuter():
                 ]
                 # 排入任务列表
                 mission = cargoShip.Mission(ship, m)
+                del m
                 # 启航
-                mission.act(time.time())
                 mission.act(time.time())
                 break  # 进行下一个曲道外星球
 
@@ -138,32 +139,48 @@ def discharge(mission):
 
 # 第一轮计算机加成的三种主要路线
 route = [
-    [2003, 11, 12, 9, 6, 1, 2, 101, 102, 201],  # 左
-    [2003, 13, 14, 15, 3, 2, 201, 301],  # 右
-    [2003, 6, 1, 2, 3, 101, 102, 201, 301]  # 中
+    [2003, 11, 12, 9, 6, 1, 2],  # 左
+    [2003, 13, 14, 15, 3, 2, 1],  # 右
+    [2003, 101, 102, 201, 301]  # 中
 ]
 
 
 # 第一轮计算机加成，加成集货星球的货物_第一步：主要航线取货
 def buffCenterShipment_1():
     c = 0
-    for ship in cargoShip.Ship.ships:
+    for ship in cargoShip.Ship.ships.values():
         if ship.hasMission:
             continue
         # 是空闲货船
         # 创建任务
         if c < len(route):
             m = [
-                [centerPlanet, cargoShip.ACTION.Passing, route[c]],  # 经过集货星球进行计算机加成
+                [centerPlanet, cargoShip.ACTION.Passing, 0, route[c]],  # 经过集货星球进行计算机加成
                 [2003, cargoShip.ACTION.Cancel],  # 取消航线
-                []  # 返回集货星球
+                [2003, cargoShip.ACTION.Passing, 0, [centerPlanet]],  # 经过曲道枢纽
+                [centerPlanet, cargoShip.ACTION.Arriving, 5],  # 停靠集货星球
+                [centerPlanet, cargoShip.ACTION.DischargeAll],  # 卸载所有货物
+                [0, 0]
             ]
             # 排入任务列表
             mission = cargoShip.Mission(ship, m)
+            # 删除列表，否则会使所有货船共用一个任务列表
+            del m
             # 启航
             mission.act(time.time())
+            c += 1
         else:  # 主要航线已经设置完毕
             break
+
+
+# 暂停程序以及恢复运行
+def pauseAndResume():
+    pos = win32gui.GetCursorPos()
+    if pos[0] > 1900:  # 鼠标贴在右边
+        print("程序暂停中。。。")
+        while pos[0] > 20:
+            pos = win32gui.GetCursorPos()
+        print("程序恢复运行。")
 
 
 if __name__ == '__main__':
@@ -173,24 +190,31 @@ if __name__ == '__main__':
     window.getPlanetLocation()
 
     # 初始化货船信息
-    for num in range(6, 7):
+    for num in range(shipCount):
         cargoShip.Ship(num)
-
-    # 取消所有货船的选中状态5
+    # 取消所有货船的选中状态
     window.KeyDown('esc')
     for item in cargoShip.Ship.ships.values():
         item.chosen = False
 
-    # 测试
-    m = [
-        [16, cargoShip.ACTION.Load_TOP, 15],
-        [16, cargoShip.ACTION.Discharge_TOP, 10],
-        [0, 0]
-    ]
-    cargoShip.Mission(cargoShip.Ship.ships[6], m)
-    while True:
-        for m in cargoShip.Mission.missions:
-            m.act(time.time())
+    # # 测试
+    # m = [
+    #     [centerPlanet, cargoShip.ACTION.Passing, 0, [2003, 11, 12, 9, 6, 1]],  # 经过集货星球
+    #     [2003, cargoShip.ACTION.Cancel],
+    #     [0, 0]
+    # ]
+    # cargoShip.Mission(cargoShip.Ship.ships[4], m)
+    # del m
+    # m = [
+    #     [centerPlanet, cargoShip.ACTION.Passing, 0, [2003, 13, 14, 15, 3, 6]],  # 经过集货星球
+    #     [2003, cargoShip.ACTION.Cancel],
+    #     [0, 0]
+    # ]
+    # cargoShip.Mission(cargoShip.Ship.ships[0], m)
+    # del m
+    # while True:
+    #     for m in cargoShip.Mission.missions:
+    #         m.act(time.time())
 
     if outerClear is False:  # 初始时曲道外星球上有货物
         # 第一轮集货
@@ -198,12 +222,17 @@ if __name__ == '__main__':
 
     # 遍历任务列表并执行--当前任务：收集曲道外星球上的货物
     while len(cargoShip.Mission.missions) > 0 and len(pendingList) == 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
+        pauseAndResume()
         for m in cargoShip.Mission.missions:
             m.act(time.time())
-    exit(0)
 
     # 主要航线设置
     buffCenterShipment_1()
+    # 遍历任务列表并执行--当前任务：计算机加成集货星球货物
+    while len(cargoShip.Mission.missions) > 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
+        pauseAndResume()
+        for m in cargoShip.Mission.missions:
+            m.act(time.time())
 
     # # 创建测试任务
     # m = [
@@ -216,9 +245,6 @@ if __name__ == '__main__':
     # while len(cargoShip.Mission.missions) > 0:
     #     for m in cargoShip.Mission.missions:
     #         m.act(time.time())
-
-
-
 
 
 # ————初始化————
