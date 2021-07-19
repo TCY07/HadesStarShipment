@@ -18,7 +18,6 @@ def match(number, background, tolerance):
     target = cv2.imread(filename)
     target = cv2.split(target)[1]
     background = cv2.split(background)[1]
-    # window.imshow(background)
 
     result = cv2.matchTemplate(background, target, cv2.TM_CCORR_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -27,6 +26,12 @@ def match(number, background, tolerance):
         if max_val > tolerance:
             x = max_loc[0] + 0.5 * target.shape[1]
             y = max_loc[1] + 0.5 * target.shape[0]
+
+            # cv2.rectangle(background, max_loc,
+            #               (max_loc[0] + target.shape[1], max_loc[1] + target.shape[0]), (255, 255, 255), 2)
+            # window.imshow(background, str(number))
+            # print(max_val)
+
             return int(x), int(y)
         else:
             # print("星球%d匹配失败" % number)
@@ -78,7 +83,7 @@ def findPlanet(planetNum, tolerance=-30):
         newSunPos_y = sunPos[1]
 
     # 重新定位视野，使得指定星区进入视野中
-    window.Relocate((newSunPos_x, newSunPos_y), 10)
+    window.Relocate((newSunPos_x, newSunPos_y), 70)
 
     # 截取指定星区图像
     screen, (screen_x, screen_y, _, _) = window.ScreenShot()
@@ -195,6 +200,11 @@ if __name__ == '__main__':
     win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
     time.sleep(0.3)
 
+    screen, _ = window.ScreenShot(handle)  # 窗口截图
+    for num in range(1, 17):
+        loc = match(num, screen, 0.5)
+
+    '''
     pos, _ = findPlanet(16)
     pos = (pos[0] - 15, pos[1] + 55)
-    win32api.SetCursorPos(pos)
+    win32api.SetCursorPos(pos)'''

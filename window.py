@@ -133,7 +133,7 @@ def sunPosition(handle=None):
     screen, _ = ScreenShot(handle)  # 窗口截图
 
     # 找到黄星
-    s = np.ones((20, 20), np.uint8)
+    s = np.ones((30, 30), np.uint8)
     opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
     grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
     _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
@@ -142,11 +142,12 @@ def sunPosition(handle=None):
     contours, _ = cv2.findContours(grey, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:  # 视野中没有找到黄星
         # 通过视野中的其他星球定位
-        for num in range(1, 17):
+        for num in range(1, 16):
             loc = Find.match(num, screen, 0.9)
-            if loc is not None:  # 该星球出现在视野中
-                # 从该星球坐标推算黄星坐标
-                # print('以星球%d为基准' % num)
+            # cv2.rectangle(screen, loc, (loc[0] + 20, loc[1] + 20), (255, 255, 255), 2)
+            # imshow(screen, str(number))
+            # 从该星球坐标推算黄星坐标
+            if loc is not None:
                 location = (int(loc[0] - locationInfo[num][0] - 700),
                             int(loc[1] - locationInfo[num][1] - 442))
                 # print(location)
@@ -218,3 +219,20 @@ def getPlanetLocation():
     fileObject.close()
 
 
+if __name__ == '__main__':
+    handle = win32gui.FindWindow(None, 'Hades\' Star')
+    win32gui.SendMessage(handle, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)  # 取消最小化
+    win32gui.SetForegroundWindow(handle)  # 高亮显示在前端
+    # 设置窗口大小/位置
+    win32gui.SetWindowPos(handle, win32con.HWND_NOTOPMOST, 160, 50, 1600, 900, win32con.SWP_SHOWWINDOW)
+    time.sleep(0.3)
+    while True:
+        screen, _ = ScreenShot(handle)  # 窗口截图
+
+        # 找到黄星
+        s = np.ones((30, 30), np.uint8)
+        opened = cv2.morphologyEx(screen, cv2.MORPH_OPEN, s)  # 开运算，消除小亮点
+        grey = cv2.cvtColor(opened, cv2.COLOR_RGB2GRAY)  # 转换为灰度图
+        _, grey = cv2.threshold(grey, 210, 255, cv2.THRESH_BINARY)  # 转化为二值图像
+        imshow(grey)
+        time.sleep(0.5)

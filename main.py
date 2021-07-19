@@ -41,6 +41,7 @@ def getShipmentInfo(name):
         item.chosen = False
 
     window.openWindow(window.WindowName.SHIPMENT)
+    time.sleep(0.2)
     shipments = shipmentInfo.getPlanetShipment()  # 得到货物信息列表
     window.closeWindow(window.WindowName.SHIPMENT)
     return shipments
@@ -141,7 +142,7 @@ def discharge(mission):
 route = [
     [2003, 11, 12, 9, 6, 1, 2],  # 左
     [2003, 13, 14, 15, 3, 2, 1],  # 右
-    [2003, 101, 102, 201, 301]  # 中
+    # [2003, 101, 102, 201, 301]  # 中
 ]
 
 
@@ -222,6 +223,7 @@ if __name__ == '__main__':
 
     # 遍历任务列表并执行--当前任务：收集曲道外星球上的货物
     while len(cargoShip.Mission.missions) > 0 and len(pendingList) == 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
+        print(pendingList)
         pauseAndResume()
         for m in cargoShip.Mission.missions:
             m.act(time.time())
