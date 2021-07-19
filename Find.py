@@ -48,7 +48,7 @@ def match(number, background, tolerance):
 
 # 返回指定星球的屏幕坐标
 # 让指定的星区进入视野范围,tolerance容忍星区不完全在视野内
-def findPlanet(planetNum, tolerance=-30):
+def findPlanet(planetNum, tolerance=-60):
     # 特例：要寻找的是曲道枢纽
     if planetNum > 2000:
         if planetNum == 2003:  # 3号枢纽

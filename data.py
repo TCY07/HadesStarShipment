@@ -211,14 +211,27 @@ def sectorPostion(name):
     elif name == 'D2E1E2':  # 2号贸易站的星区
         pos_x = 80
         pos_y = int(-5 * r + 50)
-    elif name == 'E1E2F1':  # 3号贸易站的星区
+    else:  # name == 'E1E2F1':  # 3号贸易站的星区
         pos_x = int(1.5 * a + 50)
         pos_y = int(-5.2 * r)
 
     return pos_x, pos_y
 
 
+# 各类参数
+shipCount = 8  # 货船数量
+outerClear = False  # 初始状态时，曲道外星球是否已人工清空
+# 曲道外星球列表
+outerPlanet = [4, 5, 7, 8, 10]
+# 集货星球
+centerPlanet = 16
 
-
-
+# 等待卸货的任务列表
+pendingList = []
+# 贸易站存放货物数量，用于判断是否溢出
+shipmentCount = {1002: 0, 1003: 0}
+# 屏幕缩放次数计数
+zoomTimes = 0
+# 判断两贸易站的曲道内货物，以及集货星球的曲道外货物是否已经被取走
+took = {1002: False, 1003: False, centerPlanet: False}
 

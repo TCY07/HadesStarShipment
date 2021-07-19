@@ -9,26 +9,7 @@ import window
 import Find
 import shipmentInfo
 import cargoShip
-from enum import Enum
-
-
-# 各类参数
-shipCount = 8  # 货船数量
-outerClear = False  # 初始状态时，曲道外星球是否已人工清空
-# 曲道外星球列表
-outerPlanet = [4, 5, 7, 8, 10]
-# 集货星球
-centerPlanet = 16
-
-
-# 判断两贸易站的曲道内货物，以及集货星球的曲道外货物是否已经被取走
-took = {1002: False, 1003: False, centerPlanet: False}
-# 等待卸货的任务列表
-pendingList = []
-# 贸易站存放货物数量，用于判断是否溢出
-shipmentCount = {1002: 0, 1003: 0}
-# 屏幕缩放次数计数
-zoomTimes = 0
+import data
 
 
 # 读取某星球当前货物信息列表
@@ -49,7 +30,7 @@ def getShipmentInfo(name):
 
 # 判断货物是否以曲道内星球(集货星球除外)为目的地
 def isInner(name):
-    if name in outerPlanet or name == centerPlanet or name > 1000:
+    if name in data.outerPlanet or name == data.centerPlanet or name > 1000:
         return False
     else:
         return True
@@ -60,8 +41,8 @@ def gatherOuter():
     # 统计两个贸易站的货物信息
     cargo1002 = getShipmentInfo(1002)
     cargo1003 = getShipmentInfo(1003)
-    shipmentCount[1002] = len(cargo1002)
-    shipmentCount[1003] = len(cargo1003)
+    data.shipmentCount[1002] = len(cargo1002)
+    data.shipmentCount[1003] = len(cargo1003)
 
     inner = {1002: 0, 1003: 0}  # 贸易站的曲道内的货物计数
     for i in range(len(cargo1002)):
@@ -75,7 +56,7 @@ def gatherOuter():
         else:
             break
 
-    for planet in outerPlanet:
+    for planet in data.outerPlanet:
         # 读取该星球的货物信息
         shipments = getShipmentInfo(planet)
         if len(shipments) == 0:  # 星球上无货物
@@ -86,7 +67,7 @@ def gatherOuter():
         outer = 0  # 曲道外货物计数
         for i in range(len(shipments) - 1, 0, -1):  # 倒序循环
             if shipments[i] == 1002:
-                center2 += 14
+                center2 += 1
                 outer += 1
             elif shipments[i] == 1003:
                 center3 += 1
@@ -113,9 +94,9 @@ def gatherOuter():
                     [dropStation, cargoShip.ACTION.Arriving, 35],
                     [dropStation, cargoShip.ACTION.Discharge_TOP, outer],
                     [dropStation, cargoShip.ACTION.Load_TOP, inner[dropStation]],  # 取走贸易站的曲道内货物
-                    [centerPlanet, cargoShip.ACTION.Arriving, 25],
-                    [centerPlanet, cargoShip.ACTION.DischargeAll],
-                    [centerPlanet, cargoShip.ACTION.Load_BOTTOM, -1],  # 第三个参数待真正执行时再设置
+                    [data.centerPlanet, cargoShip.ACTION.Arriving, 25],
+                    [data.centerPlanet, cargoShip.ACTION.DischargeAll],
+                    [data.centerPlanet, cargoShip.ACTION.Load_BOTTOM, -1],  # 第三个参数待真正执行时再设置
                     [0, 0]  # 任务结束
                 ]
                 # 排入任务列表
@@ -128,11 +109,11 @@ def gatherOuter():
 
 # 在集货星球依次卸货。输入任务，判断是否轮到该货船卸货
 def discharge(mission):
-    if mission not in pendingList:  # 该任务还未进入等待列表
-        pendingList.append(mission)
+    if mission not in data.pendingList:  # 该任务还未进入等待列表
+        data.pendingList.append(mission)
 
     # 判断是否轮到该任务执行卸货任务（排第一个的任务才执行）
-    if mission == pendingList[0]:
+    if mission == data.pendingList[0]:
         return True
     else:
         return False
@@ -156,11 +137,11 @@ def buffCenterShipment_1():
         # 创建任务
         if c < len(route):
             m = [
-                [centerPlanet, cargoShip.ACTION.Passing, 0, route[c]],  # 经过集货星球进行计算机加成
+                [data.centerPlanet, cargoShip.ACTION.Passing, 0, route[c]],  # 经过集货星球进行计算机加成
                 [2003, cargoShip.ACTION.Cancel],  # 取消航线
-                [2003, cargoShip.ACTION.Passing, 0, [centerPlanet]],  # 经过曲道枢纽
-                [centerPlanet, cargoShip.ACTION.Arriving, 5],  # 停靠集货星球
-                [centerPlanet, cargoShip.ACTION.DischargeAll],  # 卸载所有货物
+                [2003, cargoShip.ACTION.Passing, 0, [data.centerPlanet]],  # 经过曲道枢纽
+                [data.centerPlanet, cargoShip.ACTION.Arriving, 5],  # 停靠集货星球
+                [data.centerPlanet, cargoShip.ACTION.DischargeAll],  # 卸载所有货物
                 [0, 0]
             ]
             # 排入任务列表
@@ -191,7 +172,7 @@ if __name__ == '__main__':
     window.getPlanetLocation()
 
     # 初始化货船信息
-    for num in range(shipCount):
+    for num in range(data.shipCount):
         cargoShip.Ship(num)
     # 取消所有货船的选中状态
     window.KeyDown('esc')
@@ -200,33 +181,23 @@ if __name__ == '__main__':
 
     # # 测试
     # m = [
-    #     [centerPlanet, cargoShip.ACTION.Passing, 0, [2003, 11, 12, 9, 6, 1]],  # 经过集货星球
-    #     [2003, cargoShip.ACTION.Cancel],
+    #     [data.centerPlanet, cargoShip.ACTION.Load_BOTTOM, 15],
     #     [0, 0]
     # ]
-    # cargoShip.Mission(cargoShip.Ship.ships[4], m)
-    # del m
-    # m = [
-    #     [centerPlanet, cargoShip.ACTION.Passing, 0, [2003, 13, 14, 15, 3, 6]],  # 经过集货星球
-    #     [2003, cargoShip.ACTION.Cancel],
-    #     [0, 0]
-    # ]
-    # cargoShip.Mission(cargoShip.Ship.ships[0], m)
-    # del m
-    # while True:
-    #     for m in cargoShip.Mission.missions:
-    #         m.act(time.time())
+    # mis = cargoShip.Mission(cargoShip.Ship.ships[2], m)
+    # mis.act(time.time())
+    # exit(0)
 
-    if outerClear is False:  # 初始时曲道外星球上有货物
+    if data.outerClear is False:  # 初始时曲道外星球上有货物
         # 第一轮集货
         gatherOuter()  # （注意：现要求曲道外各星球均有货船停靠）
 
     # 遍历任务列表并执行--当前任务：收集曲道外星球上的货物
-    while len(cargoShip.Mission.missions) > 0 and len(pendingList) == 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
-        print(pendingList)
+    while len(cargoShip.Mission.missions) > 0 and len(data.pendingList) == 0:  # 进入下一步的条件：所有任务都已做完或者集货星球已满
         pauseAndResume()
         for m in cargoShip.Mission.missions:
             m.act(time.time())
+    print("第一阶段任务完成")
 
     # 主要航线设置
     buffCenterShipment_1()

@@ -230,6 +230,7 @@ def getPlanetShipment():
                         result.extend(info[0])
                         result.extend(info[1])
                         return result
+
                 window.Roll(1, 3, 0)
                 time.sleep(0.2)
                 shipmentWindow, conts = shipmentPosition()
@@ -238,15 +239,25 @@ def getPlanetShipment():
                 if info[i - 2] == back:  # 1234 5678 999
                     connectingMode = 0
                     break
-                elif [info[i - 3][3], info[i - 2][0], info[i - 2][1], info[i - 2][2]] == back:  # 1234 5678 99
+                elif [info[i - 3][3], info[i - 2][0], info[i - 2][1], info[i - 2][2]] == back:  # 1234 9999 99
                     connectingMode = 1
                     break
                 elif [info[i - 3][2], info[i - 3][3], info[i - 2][0], info[i - 2][1]] == back:  # 1234 5678 9
                     connectingMode = 2
                     break
-                else:  # 1234 5678 9999
+                elif [info[i - 2][1], info[i - 2][2], info[i - 2][3], info[i - 1][0]] == back:  # 1234 5678 9999
                     connectingMode = 3
                     break
+                #  以下情况发生在info[i - 1]和info[i]其实不是完全相同的4个货物，也就是误判了结尾
+                elif [info[i - 2][2], info[i - 2][3], info[i - 1][0], info[i - 1][1]] == back:
+                    connectingMode = 4
+                    break
+                elif [info[i - 2][3], info[i - 1][0], info[i - 1][1], info[i - 1][2]] == back:
+                    connectingMode = 5
+                    break
+                else:
+                    print("错误！货物列表末尾出现了意料之外的布局")
+                    exit(1)
 
         # 按照5-4-5-5-5的节奏滚动，可保证每次读入4个新货物的数据
         if i % 5 == 1:
@@ -259,6 +270,7 @@ def getPlanetShipment():
     result = []
     # print(connectingMode)
     # print(info)
+    # print("back:", back)
     if connectingMode == 0:  # 1234 5678 999
         for num in range(i - 1):
             result.extend(info[num])
@@ -271,9 +283,17 @@ def getPlanetShipment():
         for num in range(i - 1):
             result.extend(info[num])
         result.append(info[i][3])
-    else:  # 1234 5678 9999
+    elif connectingMode == 3:  # 1234 5678 9999
         for num in range(i):
             result.extend(info[num])
+    elif connectingMode == 4:
+        for num in range(i):
+            result.extend(info[num])
+        result.append(info[i][0])
+    elif connectingMode == 5:
+        for num in range(i):
+            result.extend(info[num])
+        result.extend([info[i][0], info[i][1]])
 
     return result
 
